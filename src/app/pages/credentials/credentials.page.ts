@@ -20,6 +20,8 @@ import { catchError, finalize, forkJoin, from, Observable, of, switchMap, tap } 
 import { ExtendedHttpErrorResponse } from 'src/app/interfaces/errors';
 import { LoaderService } from 'src/app/services/loader.service';
 import { getExtendedCredentialType, isValidCredentialType } from 'src/app/helpers/get-credential-type.helpers';
+import { OidcSecurityService } from 'angular-auth-oidc-client';
+import { Oid4vciEngineService } from 'src/app/core/protocol/oid4vci.engine.service';
 
 
 // TODO separate scan in another component/ page
@@ -59,6 +61,7 @@ export class CredentialsPage implements OnInit, ViewWillLeave {
   private readonly toastServiceHandler = inject(ToastServiceHandler);
   private readonly walletService = inject(WalletService);
   private readonly websocket = inject(WebsocketService);
+  private readonly oid4vciEngineService = inject(Oid4vciEngineService);
 
   public constructor(){
     this.route.queryParams
@@ -163,14 +166,15 @@ export class CredentialsPage implements OnInit, ViewWillLeave {
         );
       }
     }
-    const socketsToConnect: Promise<void>[] = [this.websocket.connectPinSocket()];
+    const socketsToConnect: Promise<void>[] = [];
     if (isCredentialOffer) socketsToConnect.push(this.websocket.connectNotificationSocket());
 
     from(Promise.all(socketsToConnect))
       .pipe(
         switchMap(() => {
           this.loader.addLoadingProcess();
-          return this.walletService.executeContent(qrCode);
+          // return this.walletService.executeContent(qrCode);
+          return this.oid4vciEngineService.executeOid4vciFlow(qrCode);
         }),
         switchMap((executionResponse) => {
           if (isCredentialOffer) {
@@ -186,7 +190,6 @@ export class CredentialsPage implements OnInit, ViewWillLeave {
 
         finalize(() => {
           this.loader.removeLoadingProcess();
-          this.websocket.closePinConnection();
         }),
 
         catchError((error: ExtendedHttpErrorResponse) => {
@@ -200,7 +203,6 @@ export class CredentialsPage implements OnInit, ViewWillLeave {
 
   public sameDeviceVcActivationFlow(): void {
     const socketsToConnect: Promise<void>[] = [
-      this.websocket.connectPinSocket(),
       this.websocket.connectNotificationSocket(),
     ];
 
@@ -219,10 +221,6 @@ export class CredentialsPage implements OnInit, ViewWillLeave {
         switchMap(() =>
           from(this.router.navigate(['/tabs/credentials']))
         ),
-
-        finalize(() => {
-          this.websocket.closePinConnection();
-        }),
 
         catchError((err: ExtendedHttpErrorResponse) => {
           console.error(err);
