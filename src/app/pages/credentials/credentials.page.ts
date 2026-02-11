@@ -1,13 +1,13 @@
 import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { AlertController, IonicModule, ViewWillLeave } from '@ionic/angular';
+import { IonicModule, ViewWillLeave } from '@ionic/angular';
 import { StorageService } from 'src/app/services/storage.service';
 import { BarcodeScannerComponent } from 'src/app/components/barcode-scanner/barcode-scanner.component';
 import { QRCodeModule } from 'angularx-qrcode';
 import { WalletService } from 'src/app/services/wallet.service';
 import { VcViewComponent } from '../../components/vc-view/vc-view.component';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslateModule } from '@ngx-translate/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { WebsocketService } from 'src/app/services/websocket.service';
 import { VerifiableCredential } from 'src/app/interfaces/verifiable-credential';
@@ -50,7 +50,6 @@ export class CredentialsPage implements OnInit, ViewWillLeave {
   public credentialOfferUri = '';
 
 
-  private readonly alertController = inject(AlertController);
   private readonly cameraLogsService = inject(CameraLogsService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
@@ -58,7 +57,6 @@ export class CredentialsPage implements OnInit, ViewWillLeave {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly toastServiceHandler = inject(ToastServiceHandler);
-  private readonly translate = inject(TranslateService);
   private readonly walletService = inject(WalletService);
   private readonly websocket = inject(WebsocketService);
 
