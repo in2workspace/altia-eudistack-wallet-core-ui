@@ -143,6 +143,7 @@ export class Oid4vciEngineService {
 
     const sig = await this.keyStorageProvider.sign(keyInfo.keyId, new TextEncoder().encode(signingInput));
     console.log("DER signature from key storage provider:", sig);
+    
     const sigJose = this.ecdsaSigToJose(sig, 64);
     console.log("JOSE-formatted signature:", sigJose);
 

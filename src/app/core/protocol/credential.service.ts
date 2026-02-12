@@ -35,12 +35,14 @@ export class CredentialService {
     format: string;
     credentialConfigurationId: string;
   }): Promise<CredentialResponseWithStatus> {
+    console.log("Getting credential with params:", params);
 
     const request = this.buildCredentialRequest({
       jwtProof: params.jwtProof,
       format: params.format,
       credentialConfigurationId: params.credentialConfigurationId,
     });
+    console.log("Built credential request:", request);
 
     const accessToken = params.tokenResponse.access_token;
     const endpoint = params.credentialIssuerMetadata.credentialEndpoint;
@@ -97,6 +99,7 @@ export class CredentialService {
     endpoint: string;
     body: unknown;
   }): Promise<CredentialResponseWithStatus> {
+    console.log("Posting credential request with params:", params);
     //todo maybe reusable
     const headers = new HttpHeaders({
       Authorization: `Bearer ${params.accessToken}`,
