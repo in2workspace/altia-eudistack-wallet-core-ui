@@ -19,9 +19,8 @@ const TIMEOUT_DURATION_S = 55;
 export class PreAuthorizedTokenService {
   private readonly http = inject(HttpClient);
   private readonly alertController = inject(AlertController);
-  public readonly loader = inject(LoaderService);
-  public readonly translate = inject(TranslateService);
-  private readonly toastServiceHandler = inject(ToastServiceHandler);
+  private readonly loader = inject(LoaderService);
+  private readonly translate = inject(TranslateService);
 
   private loadingTimeout: any;
 
@@ -29,22 +28,23 @@ export class PreAuthorizedTokenService {
     credentialOffer: CredentialOffer,
     authorisationServerMetadata: AuthorisationServerMetadata
   ): Promise<TokenResponse> {
-    const tokenURL = authorisationServerMetadata.tokenEndpoint;
-    const code = null; // Placeholder for PIN or tx_code, to be implemented in the respective branches
-    if(tokenURL === null || tokenURL === undefined) {
-      throw new Error('Token endpoint URL is missing in authorisation server metadata');
-    }
-
-    if ((credentialOffer?.grant?.preAuthorizedCodeGrant?.userPinRequired) || (credentialOffer?.grant?.preAuthorizedCodeGrant?.txCode != null)) {
-      const code = await this.getCodeRequest();
-    } else {
-      const raw = await this.getAccessToken(tokenURL, credentialOffer, code);
-      return this.parseTokenResponse(raw);
-    }
-
-    // Fallback to satisfy return type (should never be used in real flow)
-    throw new Error('Unreachable flow: PIN/tx_code branches intentionally left blank.');
+  const tokenURL = authorisationServerMetadata.tokenEndpoint;
+  if (!tokenURL) {
+    throw new Error('Token endpoint URL is missing in authorisation server metadata');
   }
+
+  let code: string | null = null;
+
+  const preAuth = credentialOffer?.grant?.preAuthorizedCodeGrant;
+  const needsCode = !!preAuth?.userPinRequired || preAuth?.txCode != null;
+
+  if (needsCode) {
+    code = await this.openPromptAndGetCode();
+  }
+
+  const raw = await this.getAccessToken(tokenURL, credentialOffer, code);
+  return this.parseTokenResponse(raw);
+}
 
   private async getAccessToken(
     tokenURL: string,
@@ -114,7 +114,7 @@ export class PreAuthorizedTokenService {
   }
 
   // todo review error cases (timeout, user cancellation, incorrect PIN)
-  private async getCodeRequest(): Promise<string> {    
+  private async openPromptAndGetCode(): Promise<string> {    
   
     const description = this.translate.instant('confirmation.description');
     //todo review if it comes from Issuer
