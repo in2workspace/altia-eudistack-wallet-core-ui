@@ -8,6 +8,7 @@ import { LoaderService } from './loader.service';
 import { ToastServiceHandler } from './toast.service';
 import { isNotificationRequest, Power, CredentialPreview } from '../interfaces/websocket-data';
 
+//todo restore test
 @Injectable({
   providedIn: 'root',
 })
