@@ -22,7 +22,7 @@ import { LoaderService } from 'src/app/services/loader.service';
 import { getExtendedCredentialType, isValidCredentialType } from 'src/app/helpers/get-credential-type.helpers';
 import { OidcSecurityService } from 'angular-auth-oidc-client';
 import { Oid4vciEngineService } from 'src/app/core/protocol/oid4vci.engine.service';
-
+//todo restore tests
 
 // TODO separate scan in another component/ page
 
