@@ -37,20 +37,24 @@ export class Oid4vciEngineService {
   public async executeOid4vciFlow(credentialOfferUri: string): Promise<void> {
     const token = this.authService.getToken();
     console.log("Token:", token);
+    
     const credentialOffer = await this.credentialOfferService.getCredentialOfferFromCredentialOfferUri(credentialOfferUri);
     console.log("Credential Offer:", credentialOffer);
+    
     const credentialIssuerMetadata = await this.credentialIssuerMetadataService.getCredentialIssuerMetadataFromCredentialOffer(credentialOffer);
     console.log("Credential Issuer Metadata:", credentialIssuerMetadata);
-    const authorisationServerMetadata =
-      await this.authorisationServerMetadataService.getAuthorizationServerMetadataFromCredentialIssuerMetadata(credentialIssuerMetadata);
+    
+    const authorisationServerMetadata = await this.authorisationServerMetadataService.getAuthorizationServerMetadataFromCredentialIssuerMetadata(credentialIssuerMetadata);
     console.log("Authorisation Server Metadata:", authorisationServerMetadata);
-      const tokenResponse: TokenResponse = await this.preAuthorizedTokenService.getPreAuthorizedToken(credentialOffer, authorisationServerMetadata);
-
-    const tokenObtainedAt = new Date();
-    const nonce = this.getNonce();
-
+    
+    const tokenResponse: TokenResponse = await this.preAuthorizedTokenService.getPreAuthorizedToken(credentialOffer, authorisationServerMetadata);
+    console.log("");
+    
     const cfg = this.resolveCredentialConfigurationContext(credentialOffer, credentialIssuerMetadata);
     console.log("Credential Configuration Context:", cfg);
+
+    const nonce = this.getNonce();
+    const tokenObtainedAt = new Date();
 
     let jwtProof = null;
     if (cfg.isCryptographicBindingSupported && credentialIssuerMetadata.credentialIssuer) {

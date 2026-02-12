@@ -114,7 +114,8 @@ export class PreAuthorizedTokenService {
   }
 
   // todo review error cases (timeout, user cancellation, incorrect PIN)
-  private async openPromptAndGetCode(): Promise<string> {    
+  private async openPromptAndGetCode(): Promise<string> {  
+    console.log("Opening prompt to get code.");  
   
     const description = this.translate.instant('confirmation.description');
     //todo review if it comes from Issuer
