@@ -125,7 +125,9 @@ export class Oid4vciEngineService {
   }
 
   private async buildProofJwt(params: { nonce: string; credentialIssuer: string; iss: string }): Promise<string> {
+    console.log("Building proof JWT with params:", params);
     const keyInfo = await this.keyStorageProvider.generateKeyPair('ES256', crypto.randomUUID());
+    console.log("Generated key info:", keyInfo);
 
     const headerAndPayload = this.proofBuilderService.buildHeaderAndPayload(
       params.nonce,
@@ -133,11 +135,16 @@ export class Oid4vciEngineService {
       params.iss,
       keyInfo.publicKeyJwk
     );
+    console.log("Header and Payload for JWT:", headerAndPayload);
 
+    //todo potser tindria més sentit fer que retorni directament tipus compatible amb Uint8Array<ArrayBufferLike> per a sign()
     const signingInput = this.buildSigningInput(headerAndPayload);
+    console.log("Signing input for JWT:", signingInput);
 
     const sigDer = await this.keyStorageProvider.sign(keyInfo.keyId, new TextEncoder().encode(signingInput));
+    console.log("DER signature from key storage provider:", sigDer);
     const sigJose = this.ecdsaDerToJose(sigDer, 64);
+    console.log("JOSE-formatted signature:", sigJose);
 
     return `${signingInput}.${this.base64UrlEncode(sigJose)}`;
   }
