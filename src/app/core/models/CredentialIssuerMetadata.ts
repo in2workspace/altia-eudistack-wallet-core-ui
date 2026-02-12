@@ -2,8 +2,10 @@ export interface CredentialIssuerMetadata {
   credentialIssuer?: string;
   credentialEndpoint?: string;
   deferredCredentialEndpoint?: string;
+  notification_endpoint?: string;
+  issuance_endpoint?: string;
   credentialsSupported?: unknown;
-  credentialsConfigurationsSupported: {[key: string]: CredentialsConfigurationsSuppported}; 
+  credential_configurations_supported: {[key: string]: CredentialsConfigurationsSuppported}; 
 
   /** Field that is hardcoded in the deprecated backend method. */
   authorizationServer?: string;
@@ -16,7 +18,7 @@ export interface CredentialIssuerMetadata {
 
 export interface CredentialsConfigurationsSuppported{
   format: string;
-  cryptographicBindingMethodsSupported?: string[];
+  cryptographic_binding_methods_supported?: string[];
 }
 
 export interface CredentialsSupported{

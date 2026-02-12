@@ -48,7 +48,7 @@ export class Oid4vciEngineService {
     console.log("Authorisation Server Metadata:", authorisationServerMetadata);
     
     const tokenResponse: TokenResponse = await this.preAuthorizedTokenService.getPreAuthorizedToken(credentialOffer, authorisationServerMetadata);
-    console.log("");
+    console.log("tokenResponse:", tokenResponse);
     
     const cfg = this.resolveCredentialConfigurationContext(credentialOffer, credentialIssuerMetadata);
     console.log("Credential Configuration Context:", cfg);
@@ -98,7 +98,7 @@ export class Oid4vciEngineService {
     // todo handle multiple credential configurations
     const credentialConfigurationId = ids[0];
 
-    const configs = credentialIssuerMetadata.credentialsConfigurationsSupported;
+    const configs = credentialIssuerMetadata.credential_configurations_supported;
     if (!configs) {
       throw new Error('Missing credentialsConfigurationsSupported in CredentialIssuerMetadata');
     }
@@ -113,7 +113,7 @@ export class Oid4vciEngineService {
       throw new Error(`Missing format for credential configuration ID: ${credentialConfigurationId}`);
     }
 
-    const methods = configuration.cryptographicBindingMethodsSupported;
+    const methods = configuration.cryptographic_binding_methods_supported;
     const isCryptographicBindingSupported = !!(methods && methods.length > 0);
 
     return {
