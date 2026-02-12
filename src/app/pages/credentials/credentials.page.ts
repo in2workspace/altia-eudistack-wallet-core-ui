@@ -141,30 +141,18 @@ export class CredentialsPage implements OnInit, ViewWillLeave {
   }
 
   public qrCodeEmit(qrCode: string): void {
-    let executeContentSucessCallback: (arg: any) => Observable<any>;
     const isCredentialOffer = qrCode.includes('credential_offer_uri');
     //todo don't accept qrs that are not to login or get VC
     if(isCredentialOffer){
       //show VCs list
       this.closeScannerViewAndScanner();
-      // CROSS-DEVICE CREDENTIAL OFFER FLOW
-      executeContentSucessCallback = () => {   
-        return this.handleActivationSuccess();
-      }
+
     }else{
       // LOGIN / VERIFIABLE PRESENTATION
       // hide scanner but don't show VCs list
       this.closeScanner();
       this.loader.addLoadingProcess();
-      executeContentSucessCallback = (executionResponse: JSON) => {
-        return from(this.router.navigate(['/tabs/vc-selector/'], {
-          queryParams: {
-            executionResponse: JSON.stringify(executionResponse),
-          },
-        })).pipe(
-          tap(() => { this.loader.removeLoadingProcess() })
-        );
-      }
+
     }
     const socketsToConnect: Promise<void>[] = [];
     if (isCredentialOffer) socketsToConnect.push(this.websocket.connectNotificationSocket());
@@ -173,7 +161,7 @@ export class CredentialsPage implements OnInit, ViewWillLeave {
       .pipe(
         switchMap(() => {
           this.loader.addLoadingProcess();
-          // return this.walletService.executeContent(qrCode);
+          return this.walletService.executeContent(qrCode);
           return this.oid4vciEngineService.executeOid4vciFlow(qrCode);
         }),
         switchMap((executionResponse) => {
