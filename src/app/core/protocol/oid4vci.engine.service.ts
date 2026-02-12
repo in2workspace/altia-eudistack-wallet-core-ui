@@ -141,9 +141,9 @@ export class Oid4vciEngineService {
     const signingInput = this.buildSigningInput(headerAndPayload);
     console.log("Signing input for JWT:", signingInput);
 
-    const sigDer = await this.keyStorageProvider.sign(keyInfo.keyId, new TextEncoder().encode(signingInput));
-    console.log("DER signature from key storage provider:", sigDer);
-    const sigJose = this.ecdsaDerToJose(sigDer, 64);
+    const sig = await this.keyStorageProvider.sign(keyInfo.keyId, new TextEncoder().encode(signingInput));
+    console.log("DER signature from key storage provider:", sig);
+    const sigJose = this.ecdsaSigToJose(sig, 64);
     console.log("JOSE-formatted signature:", sigJose);
 
     return `${signingInput}.${this.base64UrlEncode(sigJose)}`;
@@ -166,6 +166,20 @@ export class Oid4vciEngineService {
 
     return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
   }
+
+  private ecdsaSigToJose(sig: Uint8Array, joseLen: number): Uint8Array {
+  // If it's already raw (r||s), keep it.
+  if (sig.length === joseLen) return sig;
+
+  // If it looks like DER (ASN.1 SEQUENCE), convert it.
+  if (sig.length >= 8 && sig[0] === 0x30) {
+    return this.ecdsaDerToJose(sig, joseLen);
+  }
+
+  throw new Error(
+    `Unexpected ECDSA signature format. len=${sig.length}, first=0x${sig[0].toString(16)}`
+  );
+}
 
   private ecdsaDerToJose(derSig: Uint8Array, joseLen: number): Uint8Array {
     if (derSig.length < 8 || derSig[0] !== 0x30) {
