@@ -1,4 +1,4 @@
-import { CredentialService } from './credential.service';
+import { CredentialResponseWithStatus, CredentialService } from './credential.service';
 import { inject, Injectable } from '@angular/core';
 import { CredentialOfferService } from './credential-offer.service';
 import { CredentialIssuerMetadataService } from './credential-issuer-metadata.service';
@@ -77,12 +77,24 @@ export class Oid4vciEngineService {
     });
     console.log("Credential response: ", credentialResponseWithStatus);
 
-      //todo
+    //todo the "post-credential" logic that is currently done by the API will be moved to the client
+    this.postCredentialResponseWithStatus(credentialResponseWithStatus);
+
+  }
+
+  private postCredentialResponseWithStatus(credResponse: CredentialResponseWithStatus): void {
       this.http.post<JSON>(
           environment.server_url + SERVER_PATH.REQUEST_CREDENTIAL,
-          { qr_content: credentialResponseWithStatus },
+          { qr_content: credResponse },
           options
-        );
+        ).subscribe({
+          next: (res) => {
+            console.log("Credential response sent to server, response:", res);
+          },
+          error: (err) => {
+            console.error("Error sending credential response to server:", err);
+          }
+        });
   }
 
   private resolveCredentialConfigurationContext(
