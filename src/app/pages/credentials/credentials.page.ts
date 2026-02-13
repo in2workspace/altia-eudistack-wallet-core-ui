@@ -170,12 +170,13 @@ export class CredentialsPage implements OnInit, ViewWillLeave {
     const socketsToConnect: Promise<void>[] = [];
     if (isCredentialOffer) socketsToConnect.push(this.websocket.connectNotificationSocket());
 
+    //todo refactor to avoid the double conditional
     from(Promise.all(socketsToConnect))
       .pipe(
         switchMap(() => {
           this.loader.addLoadingProcess();
           if(isCredentialOffer){
-
+            console.log("Is credential offer: executing oid4vci flow.");
             return this.oid4vciEngineService.executeOid4vciFlow(qrCode);
           }
           return this.walletService.executeContent(qrCode);

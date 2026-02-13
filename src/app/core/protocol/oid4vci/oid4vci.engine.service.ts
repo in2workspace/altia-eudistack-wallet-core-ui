@@ -103,6 +103,8 @@ export class Oid4vciEngineService {
       format
     });
 
+    //todo verify cnf
+
   }
 
   private postCredentialResponseWithStatus(credResponse: TempPostCredentialRequestBoyd): Promise<void> {
