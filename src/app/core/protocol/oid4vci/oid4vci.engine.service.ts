@@ -15,6 +15,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
 import { SERVER_PATH } from 'src/app/constants/api.constants';
 import { options } from 'src/app/services/wallet.service';
+import { tap, firstValueFrom } from 'rxjs';
 
 interface TempPostCredentialRequestBoyd{
   credentialResponseWithStatus: CredentialResponseWithStatusCode;
@@ -93,7 +94,7 @@ export class Oid4vciEngineService {
     
     const tokenObtainedAt = Math.floor(Date.now() / 1000);
     //todo the "post-credential" logic that is currently done by the API will be moved to the client
-    this.postCredentialResponseWithStatus({
+    return this.postCredentialResponseWithStatus({
       credentialResponseWithStatus: credentialResponseWithStatusCode,
       tokenResponse,
       issuerMetadata: credentialIssuerMetadata,
@@ -104,19 +105,12 @@ export class Oid4vciEngineService {
 
   }
 
-  private postCredentialResponseWithStatus(credResponse: TempPostCredentialRequestBoyd): void {
-      this.http.post<JSON>(
+  private postCredentialResponseWithStatus(credResponse: TempPostCredentialRequestBoyd): Promise<void> {
+      return firstValueFrom(this.http.post<void>(
           environment.server_url + SERVER_PATH.REQUEST_CREDENTIAL,
           { ...credResponse },
           options
-        ).subscribe({
-          next: (res) => {
-            console.log("Credential response sent to server, response:", res);
-          },
-          error: (err) => {
-            console.error("Error sending credential response to server:", err);
-          }
-        });
+        ).pipe(tap(() => console.log("Posted credential response with status to server"))));
   }
 
   private resolveCredentialConfigurationContext(

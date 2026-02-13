@@ -141,6 +141,7 @@ export class CredentialsPage implements OnInit, ViewWillLeave {
   }
 
   public qrCodeEmit(qrCode: string): void {
+    //todo consider removing
     let executeContentSucessCallback: (arg: any) => Observable<any>;
     const isCredentialOffer = qrCode.includes('credential_offer_uri');
     //todo don't accept qrs that are not to login or get VC
@@ -217,7 +218,7 @@ export class CredentialsPage implements OnInit, ViewWillLeave {
 
         switchMap(() =>
           // this.walletService.requestOpenidCredentialOffer(this.credentialOfferUri)
-        this.oid4vciEngineService.executeOid4vciFlow(this.credentialOfferUri)
+         this.oid4vciEngineService.executeOid4vciFlow(this.credentialOfferUri)
         ),
 
         switchMap(() => this.handleActivationSuccess()),
@@ -238,6 +239,7 @@ export class CredentialsPage implements OnInit, ViewWillLeave {
 
   
   private handleActivationSuccess(): Observable<VerifiableCredential[]> {
+    console.log("Handling successful credential activation...");
     this.loader.addLoadingProcess();
 
     return this.loadCredentials()
