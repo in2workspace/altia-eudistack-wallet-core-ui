@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { JWT_PROOF_CLAIM } from 'src/app/constants/jwt-proof.constants';
-import { JwtProofHeaderAndPayload } from '../models/JwtProof';
+import { JwtProofHeaderAndPayload } from '../../models/JwtProof';
 
 
 

@@ -1,7 +1,7 @@
 import { CONTENT_TYPE_APPLICATION_JSON } from 'src/app/constants/content-type.constants';
 import { inject, Injectable } from '@angular/core';
-import { TokenResponse } from '../models/TokenResponse';
-import { CredentialIssuerMetadata } from '../models/CredentialIssuerMetadata';
+import { TokenResponse } from '../../models/TokenResponse';
+import { CredentialIssuerMetadata } from '../../models/CredentialIssuerMetadata';
 import { HttpClient, HttpErrorResponse, HttpHeaders, HttpResponse } from '@angular/common/http';
 import { firstValueFrom, tap } from 'rxjs';
 

@@ -1,4 +1,4 @@
-import { AuthorisationServerMetadata } from './../models/AuthorisationServerMetadata';
+import { AuthorisationServerMetadata } from '../../models/AuthorisationServerMetadata';
 import { CredentialResponseWithStatus, CredentialResponseWithStatusCode, CredentialService } from './credential.service';
 import { inject, Injectable } from '@angular/core';
 import { CredentialOfferService } from './credential-offer.service';
@@ -6,11 +6,11 @@ import { CredentialIssuerMetadataService } from './credential-issuer-metadata.se
 import { AuthorisationServerMetadataService } from './authorisation-server-metadata.service';
 import { AuthenticationService } from 'src/app/services/authentication.service';
 import { PreAuthorizedTokenService } from './pre-authorized-token.service';
-import { CredentialIssuerMetadata, CredentialsConfigurationsSuppported } from '../models/CredentialIssuerMetadata';
-import { CredentialOffer } from '../models/CredentialOffer';
+import { CredentialIssuerMetadata, CredentialsConfigurationsSuppported } from '../../models/CredentialIssuerMetadata';
+import { CredentialOffer } from '../../models/CredentialOffer';
 import { ProofBuilderService } from './proof-builder.service';
-import { WebCryptoKeyStorageProvider } from '../spi-impl/web-crypto-key-storage.service';
-import { TokenResponse } from '../models/TokenResponse';
+import { WebCryptoKeyStorageProvider } from '../../spi-impl/web-crypto-key-storage.service';
+import { TokenResponse } from '../../models/TokenResponse';
 import { HttpClient } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
 import { SERVER_PATH } from 'src/app/constants/api.constants';
