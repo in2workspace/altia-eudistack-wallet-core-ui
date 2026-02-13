@@ -1,4 +1,4 @@
-import { CredentialResponseWithStatus, CredentialService } from './credential.service';
+import { CredentialService } from './credential.service';
 import { inject, Injectable } from '@angular/core';
 import { CredentialOfferService } from './credential-offer.service';
 import { CredentialIssuerMetadataService } from './credential-issuer-metadata.service';
@@ -10,7 +10,7 @@ import { CredentialOffer } from '../models/CredentialOffer';
 import { ProofBuilderService } from './proof-builder.service';
 import { WebCryptoKeyStorageProvider } from '../spi-impl/web-crypto-key-storage.service';
 import { TokenResponse } from '../models/TokenResponse';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
 import { SERVER_PATH } from 'src/app/constants/api.constants';
 import { options } from 'src/app/services/wallet.service';
@@ -60,8 +60,7 @@ export class Oid4vciEngineService {
     if (cfg.isCryptographicBindingSupported && credentialIssuerMetadata.credentialIssuer) {
       jwtProof = await this.buildProofJwt({
         nonce,
-        credentialIssuer: credentialIssuerMetadata.credentialIssuer,
-        iss: '', // TODO: wallet identifier (not did:key)
+        credentialIssuer: credentialIssuerMetadata.credentialIssuer
       });
     }
     console.log("JWT Proof:", jwtProof);
@@ -124,7 +123,7 @@ export class Oid4vciEngineService {
     };
   }
 
-  private async buildProofJwt(params: { nonce: string; credentialIssuer: string; iss: string }): Promise<string> {
+  private async buildProofJwt(params: { nonce: string; credentialIssuer: string; }): Promise<string> {
     console.log("Building proof JWT with params:", params);
     const keyInfo = await this.keyStorageProvider.generateKeyPair('ES256', crypto.randomUUID());
     console.log("Generated key info:", keyInfo);
@@ -132,7 +131,6 @@ export class Oid4vciEngineService {
     const headerAndPayload = this.proofBuilderService.buildHeaderAndPayload(
       params.nonce,
       params.credentialIssuer,
-      params.iss,
       keyInfo.publicKeyJwk
     );
     console.log("Header and Payload for JWT:", headerAndPayload);
