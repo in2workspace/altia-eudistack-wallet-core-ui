@@ -38,13 +38,14 @@ export class WebCryptoKeyStorageProvider extends KeyStorageProvider {
     const params = this.getAlgorithmParams(algorithm);
 
     // Generate NON-EXTRACTABLE key pair (critical).
+    // We assume it is a key pair because currently only ECDSA is supported (with symmetric algorithms only one is returned).
     const keyPair = await crypto.subtle.generateKey(
       params.algorithm,
       false, // extractable = false
       params.usages
     );
 
-    // Export only the public key (always allowed).
+
     const publicKeyJwk = await crypto.subtle.exportKey('jwk', keyPair.publicKey);
 
     // Compute kid as JWK thumbprint (RFC 7638).
@@ -206,15 +207,20 @@ export class WebCryptoKeyStorageProvider extends KeyStorageProvider {
    * For EC keys: required members are crv, kty, x, y (lexicographic order).
    */
   private async computeJwkThumbprint(jwk: JsonWebKey): Promise<string> {
-    if (!jwk.crv || !jwk.kty || !jwk.x || !jwk.y) {
+    const crv = jwk.crv;
+    const kty = jwk.kty;
+    const x = jwk.x;
+    const y = jwk.y;
+
+    if (!crv || !kty || !x || !y) {
       throw new Error('Invalid EC public JWK: missing required parameters (crv, kty, x, y).');
     }
 
     const thumbprintInput = JSON.stringify({
-      crv: jwk.crv,
-      kty: jwk.kty,
-      x: jwk.x,
-      y: jwk.y,
+      crv: crv,
+      kty: kty,
+      x: x,
+      y: y,
     });
 
     const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(thumbprintInput));
@@ -222,11 +228,14 @@ export class WebCryptoKeyStorageProvider extends KeyStorageProvider {
   }
 
   private jwkToAlgorithm(jwk: JsonWebKey): RawKeyAlgorithm {
-    if (jwk.kty !== 'EC') {
-      throw new Error(`Unsupported key type: ${jwk.kty ?? 'unknown'}`);
+    const kty = jwk.kty;
+    const crv = jwk.crv;
+
+    if (kty !== 'EC') {
+      throw new Error(`Unsupported key type: ${kty ?? 'unknown'}`);
     }
-    if (jwk.crv === 'P-256') return 'ES256';
-    throw new Error(`Unsupported curve: ${jwk.crv ?? 'unknown'}`);
+    if (crv === 'P-256') return 'ES256';
+    throw new Error(`Unsupported curve: ${crv ?? 'unknown'}`);
   }
 
   private async openDatabase(): Promise<IDBDatabase> {
