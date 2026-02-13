@@ -1,13 +1,13 @@
 import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { AlertController, IonicModule, ViewWillLeave } from '@ionic/angular';
+import { IonicModule, ViewWillLeave } from '@ionic/angular';
 import { StorageService } from 'src/app/services/storage.service';
 import { BarcodeScannerComponent } from 'src/app/components/barcode-scanner/barcode-scanner.component';
 import { QRCodeModule } from 'angularx-qrcode';
 import { WalletService } from 'src/app/services/wallet.service';
 import { VcViewComponent } from '../../components/vc-view/vc-view.component';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslateModule } from '@ngx-translate/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { WebsocketService } from 'src/app/services/websocket.service';
 import { VerifiableCredential } from 'src/app/interfaces/verifiable-credential';
@@ -20,7 +20,9 @@ import { catchError, finalize, forkJoin, from, Observable, of, switchMap, tap } 
 import { ExtendedHttpErrorResponse } from 'src/app/interfaces/errors';
 import { LoaderService } from 'src/app/services/loader.service';
 import { getExtendedCredentialType, isValidCredentialType } from 'src/app/helpers/get-credential-type.helpers';
-
+import { OidcSecurityService } from 'angular-auth-oidc-client';
+import { Oid4vciEngineService } from 'src/app/core/protocol/oid4vci/oid4vci.engine.service';
+//todo restore tests
 
 // TODO separate scan in another component/ page
 
@@ -50,7 +52,6 @@ export class CredentialsPage implements OnInit, ViewWillLeave {
   public credentialOfferUri = '';
 
 
-  private readonly alertController = inject(AlertController);
   private readonly cameraLogsService = inject(CameraLogsService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
@@ -58,9 +59,9 @@ export class CredentialsPage implements OnInit, ViewWillLeave {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly toastServiceHandler = inject(ToastServiceHandler);
-  private readonly translate = inject(TranslateService);
   private readonly walletService = inject(WalletService);
   private readonly websocket = inject(WebsocketService);
+  private readonly oid4vciEngineService = inject(Oid4vciEngineService);
 
   public constructor(){
     this.route.queryParams
@@ -140,6 +141,7 @@ export class CredentialsPage implements OnInit, ViewWillLeave {
   }
 
   public qrCodeEmit(qrCode: string): void {
+    //todo consider removing
     let executeContentSucessCallback: (arg: any) => Observable<any>;
     const isCredentialOffer = qrCode.includes('credential_offer_uri');
     //todo don't accept qrs that are not to login or get VC
@@ -165,13 +167,18 @@ export class CredentialsPage implements OnInit, ViewWillLeave {
         );
       }
     }
-    const socketsToConnect: Promise<void>[] = [this.websocket.connectPinSocket()];
+    const socketsToConnect: Promise<void>[] = [];
     if (isCredentialOffer) socketsToConnect.push(this.websocket.connectNotificationSocket());
 
+    //todo refactor to avoid the double conditional
     from(Promise.all(socketsToConnect))
       .pipe(
         switchMap(() => {
           this.loader.addLoadingProcess();
+          if(isCredentialOffer){
+            console.log("Is credential offer: executing oid4vci flow.");
+            return this.oid4vciEngineService.executeOid4vciFlow(qrCode);
+          }
           return this.walletService.executeContent(qrCode);
         }),
         switchMap((executionResponse) => {
@@ -188,7 +195,6 @@ export class CredentialsPage implements OnInit, ViewWillLeave {
 
         finalize(() => {
           this.loader.removeLoadingProcess();
-          this.websocket.closePinConnection();
         }),
 
         catchError((error: ExtendedHttpErrorResponse) => {
@@ -202,7 +208,6 @@ export class CredentialsPage implements OnInit, ViewWillLeave {
 
   public sameDeviceVcActivationFlow(): void {
     const socketsToConnect: Promise<void>[] = [
-      this.websocket.connectPinSocket(),
       this.websocket.connectNotificationSocket(),
     ];
 
@@ -213,7 +218,8 @@ export class CredentialsPage implements OnInit, ViewWillLeave {
         }),
 
         switchMap(() =>
-          this.walletService.requestOpenidCredentialOffer(this.credentialOfferUri)
+          // this.walletService.requestOpenidCredentialOffer(this.credentialOfferUri)
+         this.oid4vciEngineService.executeOid4vciFlow(this.credentialOfferUri)
         ),
 
         switchMap(() => this.handleActivationSuccess()),
@@ -221,10 +227,6 @@ export class CredentialsPage implements OnInit, ViewWillLeave {
         switchMap(() =>
           from(this.router.navigate(['/tabs/credentials']))
         ),
-
-        finalize(() => {
-          this.websocket.closePinConnection();
-        }),
 
         catchError((err: ExtendedHttpErrorResponse) => {
           console.error(err);
@@ -238,6 +240,7 @@ export class CredentialsPage implements OnInit, ViewWillLeave {
 
   
   private handleActivationSuccess(): Observable<VerifiableCredential[]> {
+    console.log("Handling successful credential activation...");
     this.loader.addLoadingProcess();
 
     return this.loadCredentials()

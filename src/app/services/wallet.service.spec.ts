@@ -11,6 +11,7 @@ import {
   VerifiableCredential,
 } from '../interfaces/verifiable-credential';
 import { SERVER_PATH } from '../constants/api.constants';
+import { CONTENT_TYPE } from '../constants/content-type.constants';
 
 interface VCReply {
   selectedVcList: any[];
@@ -50,7 +51,7 @@ describe('WalletService', () => {
     );
     expect(req.request.method).toEqual('POST');
     expect(req.request.body).toEqual({ qr_content: mockUrl });
-    expect(req.request.headers.get('Content-Type')).toBe('application/json'); // Opcional: comprovar headers si cal
+    expect(req.request.headers.get(CONTENT_TYPE)).toBe('application/json'); // Opcional: comprovar headers si cal
     req.flush(mockResponse);
   });
 

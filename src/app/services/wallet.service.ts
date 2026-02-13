@@ -10,7 +10,7 @@ const headers = new HttpHeaders({
   'Content-Type': 'application/json',
   'Allow-Control-Allow-Origin': '*',
 });
-const options = {
+export const options = {
   headers: headers,
   redirect: 'follow',
 };
