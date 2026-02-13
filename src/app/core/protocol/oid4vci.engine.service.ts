@@ -69,19 +69,19 @@ export class Oid4vciEngineService {
     // Reuse the resolved config. No repetition.
     const format = cfg.format;
     const credentialConfigurationId = cfg.credentialConfigurationId;
-    const credentialResponse: CredentialResponseWithStatus = await this.credentialService.getCredential({
+    const credentialResponseWithStatus = await this.credentialService.getCredential({
       jwtProof, 
       tokenResponse,
       credentialIssuerMetadata,
       format,
       credentialConfigurationId
     });
-    console.log("Credential response: ", credentialResponse);
+    console.log("Credential response: ", credentialResponseWithStatus);
 
       //todo
       this.http.post<JSON>(
           environment.server_url + SERVER_PATH.REQUEST_CREDENTIAL,
-          { qr_content: credentialResponse },
+          { qr_content: credentialResponseWithStatus },
           options
         );
   }
@@ -141,13 +141,12 @@ export class Oid4vciEngineService {
     const signingInput = this.buildSigningInput(headerAndPayload);
     console.log("Signing input for JWT:", signingInput);
 
-    const sig = await this.keyStorageProvider.sign(keyInfo.keyId, new TextEncoder().encode(signingInput));
-    console.log("DER signature from key storage provider:", sig);
+    const signature = await this.keyStorageProvider.sign(keyInfo.keyId, new TextEncoder().encode(signingInput));
+    console.log("DER signature from key storage provider:", signature);
     
-    const sigJose = this.ecdsaSigToJose(sig, 64);
-    console.log("JOSE-formatted signature:", sigJose);
+    console.log("JOSE-formatted signature:", signature);
 
-    return `${signingInput}.${this.base64UrlEncode(sigJose)}`;
+    return `${signingInput}.${this.base64UrlEncode(signature)}`;
   }
 
   private buildSigningInput(parts: { header: unknown; payload: unknown }): string {
@@ -166,64 +165,6 @@ export class Oid4vciEngineService {
     }
 
     return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-  }
-
-  private ecdsaSigToJose(sig: Uint8Array, joseLen: number): Uint8Array {
-  // If it's already raw (r||s), keep it.
-  if (sig.length === joseLen) return sig;
-
-  // If it looks like DER (ASN.1 SEQUENCE), convert it.
-  if (sig.length >= 8 && sig[0] === 0x30) {
-    return this.ecdsaDerToJose(sig, joseLen);
-  }
-
-  throw new Error(
-    `Unexpected ECDSA signature format. len=${sig.length}, first=0x${sig[0].toString(16)}`
-  );
-}
-
-  private ecdsaDerToJose(derSig: Uint8Array, joseLen: number): Uint8Array {
-    if (derSig.length < 8 || derSig[0] !== 0x30) {
-      throw new Error('Invalid DER signature');
-    }
-
-    let offset = 2;
-    if (derSig[1] & 0x80) {
-      const n = derSig[1] & 0x7f;
-      offset = 2 + n;
-    }
-
-    if (derSig[offset] !== 0x02) throw new Error('Invalid DER signature (r)');
-    const rLen = derSig[offset + 1];
-    const r = derSig.slice(offset + 2, offset + 2 + rLen);
-    offset = offset + 2 + rLen;
-
-    if (derSig[offset] !== 0x02) throw new Error('Invalid DER signature (s)');
-    const sLen = derSig[offset + 1];
-    const s = derSig.slice(offset + 2, offset + 2 + sLen);
-
-    const out = new Uint8Array(joseLen);
-    const half = joseLen / 2;
-
-    out.set(this.leftPad(this.stripLeadingZeros(r), half), 0);
-    out.set(this.leftPad(this.stripLeadingZeros(s), half), half);
-
-    return out;
-  }
-
-  private stripLeadingZeros(bytes: Uint8Array): Uint8Array {
-    let i = 0;
-    while (i < bytes.length - 1 && bytes[i] === 0x00) i++;
-    return bytes.slice(i);
-  }
-
-  private leftPad(bytes: Uint8Array, size: number): Uint8Array {
-    if (bytes.length > size) {
-      return bytes.slice(bytes.length - size);
-    }
-    const out = new Uint8Array(size);
-    out.set(bytes, size - bytes.length);
-    return out;
   }
 
   // todo use nonce endpoint when it is supported

@@ -1,16 +1,16 @@
 import { Injectable } from '@angular/core';
 
-export interface JwtPayloadPayload {
+export interface JwtHeaderAndPayload {
+  header: JwtHeader;
+  payload: JwtPayload;
+}
+
+export interface JwtPayload {
   iss: string;
   aud: string[];
   iat: number;
   exp: number;
   nonce: string;
-}
-
-export interface JwtHeaderAndPayload {
-  header: JwtHeader;
-  payload: JwtPayloadPayload;
 }
 
 export interface JwtHeader {
