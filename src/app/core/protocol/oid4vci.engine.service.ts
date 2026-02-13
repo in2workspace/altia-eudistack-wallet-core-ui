@@ -1,4 +1,5 @@
-import { CredentialResponseWithStatus, CredentialService } from './credential.service';
+import { AuthorisationServerMetadata } from './../models/AuthorisationServerMetadata';
+import { CredentialResponseWithStatus, CredentialResponseWithStatusCode, CredentialService } from './credential.service';
 import { inject, Injectable } from '@angular/core';
 import { CredentialOfferService } from './credential-offer.service';
 import { CredentialIssuerMetadataService } from './credential-issuer-metadata.service';
@@ -14,6 +15,15 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
 import { SERVER_PATH } from 'src/app/constants/api.constants';
 import { options } from 'src/app/services/wallet.service';
+
+interface TempPostCredentialRequestBoyd{
+  credentialResponseWithStatus: CredentialResponseWithStatusCode;
+  tokenResponse: TokenResponse;
+  issuerMetadata: CredentialIssuerMetadata;
+  authorisationServerMetadata: AuthorisationServerMetadata;
+  tokenObtainedAt: number; //Unix timestamp in seconds
+  format: string;
+}
 
 interface CredentialConfigurationContext {
   credentialConfigurationId: string;
@@ -54,8 +64,7 @@ export class Oid4vciEngineService {
     console.log("Credential Configuration Context:", cfg);
 
     const nonce = this.getNonce();
-    const tokenObtainedAt = new Date();
-
+    
     let jwtProof = null;
     if (cfg.isCryptographicBindingSupported && credentialIssuerMetadata.credentialIssuer) {
       jwtProof = await this.buildProofJwt({
@@ -64,7 +73,7 @@ export class Oid4vciEngineService {
       });
     }
     console.log("JWT Proof:", jwtProof);
-
+    
     // Reuse the resolved config. No repetition.
     const format = cfg.format;
     const credentialConfigurationId = cfg.credentialConfigurationId;
@@ -77,15 +86,28 @@ export class Oid4vciEngineService {
     });
     console.log("Credential response: ", credentialResponseWithStatus);
 
+    //parse status code to match API expectations
+    const credentialResponseWithStatusCode: CredentialResponseWithStatusCode = {
+      statusCode: credentialResponseWithStatus.status, ...credentialResponseWithStatus
+    }
+    
+    const tokenObtainedAt = Math.floor(Date.now() / 1000);
     //todo the "post-credential" logic that is currently done by the API will be moved to the client
-    this.postCredentialResponseWithStatus(credentialResponseWithStatus);
+    this.postCredentialResponseWithStatus({
+      credentialResponseWithStatus: credentialResponseWithStatusCode,
+      tokenResponse,
+      issuerMetadata: credentialIssuerMetadata,
+      authorisationServerMetadata,
+      tokenObtainedAt,
+      format
+    });
 
   }
 
-  private postCredentialResponseWithStatus(credResponse: CredentialResponseWithStatus): void {
+  private postCredentialResponseWithStatus(credResponse: TempPostCredentialRequestBoyd): void {
       this.http.post<JSON>(
           environment.server_url + SERVER_PATH.REQUEST_CREDENTIAL,
-          { qr_content: credResponse },
+          { ...credResponse },
           options
         ).subscribe({
           next: (res) => {

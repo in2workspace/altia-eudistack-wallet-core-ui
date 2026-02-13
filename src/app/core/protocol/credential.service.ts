@@ -3,11 +3,16 @@ import { inject, Injectable } from '@angular/core';
 import { TokenResponse } from '../models/TokenResponse';
 import { CredentialIssuerMetadata } from '../models/CredentialIssuerMetadata';
 import { HttpClient, HttpErrorResponse, HttpHeaders, HttpResponse } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, tap } from 'rxjs';
 
 export interface CredentialResponseWithStatus {
   credentialResponse: CredentialResponse;
   status: number;
+}
+
+export interface CredentialResponseWithStatusCode {
+  credentialResponse: CredentialResponse;
+  statusCode: number;
 }
 
 export interface CredentialResponse {
@@ -113,7 +118,7 @@ export class CredentialService {
         this.http.post<CredentialResponse>(params.endpoint, params.body, {
           headers,
           observe: 'response',
-        })
+        }).pipe(tap(resp=> console.log("Received credential response:", resp)))
       );
     } catch (e) {
       if (e instanceof HttpErrorResponse) {
