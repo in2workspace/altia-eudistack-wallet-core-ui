@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, ModalController, ViewWillEnter, ViewWillLeave } from '@ionic/angular';
 import { Router } from '@angular/router';
@@ -30,15 +30,16 @@ export class ScanPage implements ViewWillEnter, ViewWillLeave {
   private readonly toastServiceHandler = inject(ToastServiceHandler);
   private readonly hapticService = inject(HapticService);
   private readonly qrContentService = inject(QrContentService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   public ionViewWillEnter(): void {
     this.showScanner = true;
+    this.cdr.detectChanges();
   }
 
-  // Ionic caches the page, so ngOnDestroy never runs; tearing the camera down
-  // here is what releases the device when the user switches tab.
   public ionViewWillLeave(): void {
     this.showScanner = false;
+    this.cdr.detectChanges();
   }
 
   public qrCodeEmit(qrCode: string): void {

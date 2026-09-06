@@ -3,9 +3,16 @@ import { Router } from '@angular/router';
 import { IonicModule, ModalController } from '@ionic/angular';
 import { TranslateModule } from '@ngx-translate/core';
 import { of } from 'rxjs';
+import { Component, EventEmitter, Output } from '@angular/core';
 import { ScanPage } from './scan.page';
+import { BarcodeScannerComponent } from 'src/app/shared/components/barcode-scanner/barcode-scanner.component';
 import { ToastServiceHandler } from 'src/app/shared/services/toast.service';
 import { HapticService } from 'src/app/shared/services/haptic.service';
+
+@Component({ selector: 'app-barcode-scanner', standalone: true, template: '' })
+class BarcodeScannerStubComponent {
+  @Output() public qrCode = new EventEmitter<string>();
+}
 
 describe('ScanPage', () => {
   let component: ScanPage;
@@ -20,6 +27,11 @@ describe('ScanPage', () => {
     haptic = { notification: jest.fn(), impact: jest.fn() } as any;
 
     const modalCtrlMock = { create: jest.fn() };
+
+    TestBed.overrideComponent(ScanPage, {
+      remove: { imports: [BarcodeScannerComponent] },
+      add: { imports: [BarcodeScannerStubComponent] },
+    });
 
     TestBed.overrideComponent(ScanPage, {
       add: { providers: [{ provide: ModalController, useValue: modalCtrlMock }] },
@@ -45,6 +57,16 @@ describe('ScanPage', () => {
 
     component.ionViewWillLeave();
     expect(component.showScanner).toBe(false);
+  });
+
+  it('removes the scanner element from the DOM on leave, releasing the camera', () => {
+    component.ionViewWillEnter();
+    expect(fixture.nativeElement.querySelector('app-barcode-scanner')).toBeTruthy();
+
+    // Ionic caches the page, so the flag alone is not enough: without an explicit
+    // change-detection pass the element stays mounted and keeps the MediaStream open.
+    component.ionViewWillLeave();
+    expect(fixture.nativeElement.querySelector('app-barcode-scanner')).toBeNull();
   });
 
   it('shows an error and does not navigate on unsupported content', () => {
