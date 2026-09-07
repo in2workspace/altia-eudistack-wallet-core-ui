@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { IonicModule } from '@ionic/angular';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { signal } from '@angular/core';
+import { WritableSignal, signal } from '@angular/core';
 import { SettingsPage } from './settings.page';
 import { StorageService } from 'src/app/shared/services/storage.service';
 import { UserPreferencesService } from 'src/app/shared/services/user-preferences.service';
@@ -17,6 +17,16 @@ describe('SettingsPage', () => {
   let prefs: { darkMode: jest.Mock; toggleDarkMode: jest.Mock };
   let camera: Record<string, jest.Mock | unknown>;
   let translateUse: jest.SpyInstance;
+  let uiTranslation: {
+    status: WritableSignal<string>;
+    progress: WritableSignal<unknown>;
+    availableTargets: WritableSignal<string[]>;
+    targetLanguage: jest.Mock;
+    probeAvailability: jest.Mock;
+    restoreFromPreference: jest.Mock;
+    activate: jest.Mock;
+    deactivate: jest.Mock;
+  };
 
   beforeEach(async () => {
     router = { navigate: jest.fn().mockResolvedValue(true) };
@@ -33,10 +43,10 @@ describe('SettingsPage', () => {
       handleCameraErrors: jest.fn(),
     };
 
-    const uiTranslation = {
-      status: signal('idle'),
-      progress: signal(null),
-      availableTargets: signal([]),
+    uiTranslation = {
+      status: signal<string>('idle'),
+      progress: signal<unknown>(null),
+      availableTargets: signal<string[]>([]),
       targetLanguage: jest.fn().mockReturnValue(null),
       probeAvailability: jest.fn().mockResolvedValue(undefined),
       restoreFromPreference: jest.fn().mockResolvedValue(undefined),
@@ -153,5 +163,177 @@ describe('SettingsPage', () => {
     component.backToWallet();
 
     expect(router.navigate).toHaveBeenCalledWith(['/tabs/credentials']);
+  });
+
+  describe('stored language resolution', () => {
+    const latestLanguage = (): string | undefined => {
+      let value: string | undefined;
+      component.languageSelected.subscribe((code) => (value = code)).unsubscribe();
+      return value;
+    };
+
+    it('falls back to the active translate language when nothing is stored', async () => {
+      storage.get.mockResolvedValueOnce(null);
+      TestBed.inject(TranslateService).currentLang = 'en';
+
+      component.ngOnInit();
+      await Promise.resolve();
+
+      expect(latestLanguage()).toBe('en');
+    });
+
+    it('falls back to Catalan when there is neither stored nor active language', async () => {
+      storage.get.mockResolvedValueOnce(null);
+      TestBed.inject(TranslateService).currentLang = undefined as unknown as string;
+
+      component.ngOnInit();
+      await Promise.resolve();
+
+      expect(latestLanguage()).toBe('ca');
+    });
+  });
+
+  describe('targetLanguageName', () => {
+    it('resolves the display name through Intl', () => {
+      const of = jest.fn().mockReturnValue('English');
+      const spy = jest
+        .spyOn(Intl, 'DisplayNames')
+        .mockImplementation(() => ({ of }) as unknown as Intl.DisplayNames);
+
+      expect(component.targetLanguageName('en')).toBe('English');
+      expect(of).toHaveBeenCalledWith('en');
+
+      spy.mockRestore();
+    });
+
+    it('returns the raw code when Intl has no name for it', () => {
+      const spy = jest
+        .spyOn(Intl, 'DisplayNames')
+        .mockImplementation(() => ({ of: () => undefined }) as unknown as Intl.DisplayNames);
+
+      expect(component.targetLanguageName('zz')).toBe('zz');
+
+      spy.mockRestore();
+    });
+
+    it('returns the raw code when Intl throws on an invalid tag', () => {
+      const spy = jest.spyOn(Intl, 'DisplayNames').mockImplementation(() => {
+        throw new RangeError('invalid tag');
+      });
+
+      expect(component.targetLanguageName('not-a-tag')).toBe('not-a-tag');
+
+      spy.mockRestore();
+    });
+  });
+
+  describe('translation toggle', () => {
+    it('activates the first available target when none was chosen yet', () => {
+      uiTranslation.availableTargets.set(['en', 'fr']);
+
+      component.onTranslationToggle(true);
+
+      expect(component.selectedTargetLanguage).toBe('en');
+      expect(uiTranslation.activate).toHaveBeenCalledWith('en');
+    });
+
+    it('keeps the already chosen target when switching on', () => {
+      uiTranslation.availableTargets.set(['en', 'fr']);
+      component.selectedTargetLanguage = 'fr';
+
+      component.onTranslationToggle(true);
+
+      expect(uiTranslation.activate).toHaveBeenCalledWith('fr');
+    });
+
+    it('does nothing when switching on with no target available', () => {
+      uiTranslation.availableTargets.set([]);
+
+      component.onTranslationToggle(true);
+
+      expect(uiTranslation.activate).not.toHaveBeenCalled();
+      expect(component.selectedTargetLanguage).toBeNull();
+    });
+
+    it('deactivates when switched off', () => {
+      component.onTranslationToggle(false);
+
+      expect(uiTranslation.deactivate).toHaveBeenCalled();
+      expect(uiTranslation.activate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('onTargetLanguageChange', () => {
+    it('re-activates with the new target while translation is running', () => {
+      uiTranslation.status.set('active');
+
+      component.onTargetLanguageChange('fr');
+
+      expect(component.selectedTargetLanguage).toBe('fr');
+      expect(uiTranslation.activate).toHaveBeenCalledWith('fr');
+    });
+
+    it('only records the target while translation is off', () => {
+      uiTranslation.status.set('idle');
+
+      component.onTargetLanguageChange('fr');
+
+      expect(component.selectedTargetLanguage).toBe('fr');
+      expect(uiTranslation.activate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('retryTranslation', () => {
+    it('retries with the chosen target', () => {
+      component.selectedTargetLanguage = 'fr';
+
+      component.retryTranslation();
+
+      expect(uiTranslation.activate).toHaveBeenCalledWith('fr');
+    });
+
+    it('falls back to the target remembered by the service', () => {
+      component.selectedTargetLanguage = null;
+      uiTranslation.targetLanguage.mockReturnValue('de');
+
+      component.retryTranslation();
+
+      expect(uiTranslation.activate).toHaveBeenCalledWith('de');
+    });
+
+    it('falls back to the first available target', () => {
+      component.selectedTargetLanguage = null;
+      uiTranslation.targetLanguage.mockReturnValue(null);
+      uiTranslation.availableTargets.set(['it']);
+
+      component.retryTranslation();
+
+      expect(uiTranslation.activate).toHaveBeenCalledWith('it');
+    });
+
+    it('does nothing when there is no target at all', () => {
+      component.selectedTargetLanguage = null;
+      uiTranslation.targetLanguage.mockReturnValue(null);
+      uiTranslation.availableTargets.set([]);
+
+      component.retryTranslation();
+
+      expect(uiTranslation.activate).not.toHaveBeenCalled();
+    });
+  });
+
+  it('clears the camera-switching flag once the grace period elapses', async () => {
+    jest.useFakeTimers();
+    try {
+      const pending = component.onDeviceSelectChange('cam-1');
+      expect(component.isChangingDevice).toBe(true);
+
+      await pending;
+      jest.advanceTimersByTime(2000);
+
+      expect(component.isChangingDevice).toBe(false);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });
