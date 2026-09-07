@@ -199,6 +199,27 @@ describe('RemoteAuthService', () => {
     });
   });
 
+  describe('getRefreshToken', () => {
+    it('should return empty string when there is no session', () => {
+      expect(service.getRefreshToken()).toBe('');
+    });
+
+    it('should return the current refresh token after a successful verifyEmail()', (done) => {
+      const tokenResponse: TokenPairResponse = {
+        accessToken: 'eyJhbGciOiJSUzI1NiJ9.' + btoa(JSON.stringify({ sub: 'uuid-1' })) + '.sig',
+        refreshToken: 'refresh-current',
+        expiresIn: 900,
+      };
+
+      service.verifyEmail('test@example.com', '123456').subscribe(() => {
+        expect(service.getRefreshToken()).toBe('refresh-current');
+        done();
+      });
+
+      httpMock.expectOne(`${AUTH_BASE}/verify-email`).flush(tokenResponse);
+    });
+  });
+
   describe('getName$', () => {
     it('should emit empty string initially', (done) => {
       service.getName$().subscribe((name) => {

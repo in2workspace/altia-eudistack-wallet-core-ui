@@ -343,6 +343,53 @@ describe('LoginPage (server mode)', () => {
     });
   });
 
+  describe('EUD-104: confirming the session on a returning device (full re-auth)', () => {
+    beforeEach(() => {
+      const mockCredentialsGet = jest.fn().mockResolvedValue({});
+      Object.defineProperty(globalThis.navigator, 'credentials', {
+        value: { get: mockCredentialsGet },
+        configurable: true,
+        writable: true,
+      });
+      component.needsPasskeySetup = false;
+      (component as any).matchedPasskeyId = 'p1';
+    });
+
+    it('confirms the session against the matched passkey after a successful assertion', async () => {
+      await component.verifyPasskey();
+
+      expect(mockPasskeyApi.confirmSession).toHaveBeenCalledWith('p1', 'refresh-1');
+      expect(mockRouter.navigateByUrl).toHaveBeenCalled();
+    });
+
+    it('does not call confirmSession when there is no current refresh token', async () => {
+      mockAuthService.getRefreshToken.mockReturnValue('');
+
+      await component.verifyPasskey();
+
+      expect(mockPasskeyApi.confirmSession).not.toHaveBeenCalled();
+      expect(mockRouter.navigateByUrl).toHaveBeenCalled();
+    });
+
+    it('does not block login or navigation when confirmSession fails', async () => {
+      mockPasskeyApi.confirmSession.mockReturnValue(throwError(() => ({ status: 500 })));
+
+      await component.verifyPasskey();
+
+      expect(mockRouter.navigateByUrl).toHaveBeenCalled();
+      expect(component.errorMessage).toBe('');
+    });
+
+    it('does not call confirmSession when resuming from a stored refresh token (already-linked fast path)', async () => {
+      (component as any).passkeyFromRefreshToken = true;
+
+      await component.verifyPasskey();
+
+      expect(mockPasskeyApi.confirmSession).not.toHaveBeenCalled();
+      expect(mockAuthService.refreshAccessToken).toHaveBeenCalled();
+    });
+  });
+
   describe('credential sync coordination on login', () => {
     beforeEach(() => {
       const mockCredentialsGet = jest.fn().mockResolvedValue({});
