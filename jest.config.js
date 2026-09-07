@@ -47,6 +47,8 @@ module.exports = {
     "src/app/shared/components/vc-view/vc-view.component.ts",
     "src/app/features/credentials/credentials.page.ts",
     "src/app/features/auth/login/login.page.ts",
+    "src/app/core/services/auth.service.ts",
+    "src/app/core/services/passkey-api.service.ts",
     // --- EUD-142: runtime UI translation ---
     "src/app/core/models/ui-text-translation.model.ts",
     "src/app/core/constants/ui-translation.constants.ts",
