@@ -92,6 +92,31 @@ describe('SettingsPage', () => {
     expect(storage.set).toHaveBeenCalledWith('language', 'en');
   });
 
+  it('renders the language options as a native radio group', () => {
+    component.togglePanel('language');
+    fixture.detectChanges();
+
+    const radios: HTMLInputElement[] = Array.from(
+      fixture.nativeElement.querySelectorAll('.language-options input[type="radio"]')
+    );
+
+    expect(radios).toHaveLength(component.languageList.length);
+    expect(new Set(radios.map((radio) => radio.name)).size).toBe(1);
+  });
+
+  it('applies the language picked from the radio group', () => {
+    component.togglePanel('language');
+    fixture.detectChanges();
+
+    const radios: HTMLInputElement[] = Array.from(
+      fixture.nativeElement.querySelectorAll('.language-options input[type="radio"]')
+    );
+    radios.find((radio) => radio.value === 'en')?.click();
+
+    expect(translateUse).toHaveBeenCalledWith('en');
+    expect(storage.set).toHaveBeenCalledWith('language', 'en');
+  });
+
   it('ignores an empty language code', () => {
     component.languageChange('');
 

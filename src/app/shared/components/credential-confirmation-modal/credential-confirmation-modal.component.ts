@@ -271,7 +271,7 @@ export class CredentialConfirmationModalComponent {
     const total = Math.max(0, this.remainingSeconds);
     const minutes = Math.floor(total / 60);
     const seconds = total % 60;
-    return `${`${minutes}`.padStart(2, '0')}:${`${seconds}`.padStart(2, '0')}`;
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   }
 
   ionViewDidEnter(): void {

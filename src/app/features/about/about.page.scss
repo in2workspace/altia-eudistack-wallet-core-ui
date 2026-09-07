@@ -81,6 +81,7 @@
 }
 
 .about-offline-notice {
+  display: block;
   font-size: 13px;
   color: var(--status-warning);
   margin: 0 0 12px;
@@ -246,7 +247,8 @@
   gap: 8px;
   padding: 8px 0;
 
-  p {
+  p,
+  span {
     margin: 0;
     font-size: 14px;
     color: var(--text-secondary);
@@ -416,6 +418,7 @@
 }
 
 .about-email-copied {
+  display: block;
   margin: 8px 0 0;
   font-size: 13px;
   color: var(--status-success);

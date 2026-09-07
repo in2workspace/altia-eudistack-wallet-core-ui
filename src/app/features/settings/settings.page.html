@@ -15,6 +15,7 @@
           <button
             type="button"
             class="settings-row__header"
+            id="settings-header-language"
             [attr.aria-expanded]="isExpanded('language')"
             aria-controls="settings-panel-language"
             (click)="togglePanel('language')"
@@ -27,21 +28,22 @@
         </h2>
 
         @if (isExpanded('language')) {
-          <div class="settings-row__panel" id="settings-panel-language" role="region">
+          <section class="settings-row__panel" id="settings-panel-language" aria-labelledby="settings-header-language">
             @let currentLanguage = languageSelected | async;
 
             <div class="language-options" role="radiogroup" [attr.aria-label]="'language-selector.title' | translate">
               @for (language of languageList; track language.code) {
-                <button
-                  type="button"
-                  role="radio"
-                  class="language-card"
-                  [class.language-card--selected]="currentLanguage === language.code"
-                  [attr.aria-checked]="currentLanguage === language.code"
-                  (click)="languageChange(language.code)"
-                >
-                  {{ language.name }}
-                </button>
+                <label class="language-card" [class.language-card--selected]="currentLanguage === language.code">
+                  <input
+                    type="radio"
+                    class="language-card__input"
+                    name="app-language"
+                    [value]="language.code"
+                    [checked]="currentLanguage === language.code"
+                    (change)="languageChange(language.code)"
+                  />
+                  <span>{{ language.name }}</span>
+                </label>
               }
             </div>
 
@@ -51,8 +53,8 @@
 
               @if (translationStatus() === 'unavailable') {
                 <output class="translation-state translation-state--unavailable">
-                  <p>{{ "ui-translation.state-unavailable" | translate }}</p>
-                  <p class="settings-desc">{{ "ui-translation.state-unavailable-hint" | translate }}</p>
+                  <span>{{ "ui-translation.state-unavailable" | translate }}</span>
+                  <span class="settings-desc">{{ "ui-translation.state-unavailable-hint" | translate }}</span>
                 </output>
               } @else {
                 <ion-item class="translation-toggle-item" lines="none">
@@ -89,7 +91,7 @@
                 @if (translationStatus() === 'preparing') {
                   <output class="translation-state translation-state--progress">
                     <ion-spinner name="crescent" aria-hidden="true"></ion-spinner>
-                    <p>{{ "ui-translation.state-preparing" | translate }}</p>
+                    <span>{{ "ui-translation.state-preparing" | translate }}</span>
                     @if (translationProgress(); as progress) {
                       <ion-progress-bar [value]="progress.total > 0 ? progress.done / progress.total : 0"></ion-progress-bar>
                     }
@@ -106,7 +108,7 @@
                 }
               }
             </section>
-          </div>
+          </section>
         }
       </article>
 
@@ -115,6 +117,7 @@
           <button
             type="button"
             class="settings-row__header"
+            id="settings-header-theme"
             [attr.aria-expanded]="isExpanded('theme')"
             aria-controls="settings-panel-theme"
             (click)="togglePanel('theme')"
@@ -127,7 +130,7 @@
         </h2>
 
         @if (isExpanded('theme')) {
-          <div class="settings-row__panel" id="settings-panel-theme" role="region">
+          <section class="settings-row__panel" id="settings-panel-theme" aria-labelledby="settings-header-theme">
             <ion-item class="theme-toggle-item" lines="none">
               <ion-label>
                 <h3>{{ "settings.dark-mode" | translate }}</h3>
@@ -141,7 +144,7 @@
                 (ionChange)="prefs.toggleDarkMode()"
               ></ion-toggle>
             </ion-item>
-          </div>
+          </section>
         }
       </article>
 
@@ -150,6 +153,7 @@
           <button
             type="button"
             class="settings-row__header"
+            id="settings-header-camera"
             [attr.aria-expanded]="isExpanded('camera')"
             aria-controls="settings-panel-camera"
             (click)="togglePanel('camera')"
@@ -162,7 +166,7 @@
         </h2>
 
         @if (isExpanded('camera')) {
-          <div class="settings-row__panel" id="settings-panel-camera" role="region">
+          <section class="settings-row__panel" id="settings-panel-camera" aria-labelledby="settings-header-camera">
             <ion-item class="camera-select-item" lines="none">
               <ion-select
                 class="camera-select"
@@ -184,12 +188,12 @@
             </ion-item>
 
             @if (isChangingDevice) {
-              <div class="camera-switching" role="status">
+              <output class="camera-switching">
                 <ion-spinner name="lines" aria-hidden="true"></ion-spinner>
                 <span>{{ "camera-selector.changing-device" | translate }}</span>
-              </div>
+              </output>
             }
-          </div>
+          </section>
         }
       </article>
     </div>
