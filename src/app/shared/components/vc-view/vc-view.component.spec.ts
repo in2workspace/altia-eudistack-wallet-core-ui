@@ -685,4 +685,41 @@ describe('VcViewComponent', () => {
     });
   });
 
+
+  describe('verifyOnKeydown', () => {
+    function keydown(key: string): KeyboardEvent {
+      const event = new KeyboardEvent('keydown', { key, cancelable: true });
+      component.verifyOnKeydown(event);
+      return event;
+    }
+
+    it('runs the verification on Enter and suppresses the synthetic click', () => {
+      const spy = jest.spyOn(component, 'verifyCredential').mockResolvedValue(undefined);
+
+      const event = keydown('Enter');
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      // ion-button renders a native <button>, which fires click on Enter/Space by
+      // itself. Without preventDefault the handler and the click would both run.
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('runs the verification on Space and suppresses the synthetic click', () => {
+      const spy = jest.spyOn(component, 'verifyCredential').mockResolvedValue(undefined);
+
+      const event = keydown(' ');
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('ignores any other key', () => {
+      const spy = jest.spyOn(component, 'verifyCredential').mockResolvedValue(undefined);
+
+      const event = keydown('Tab');
+
+      expect(spy).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
+    });
+  });
 });

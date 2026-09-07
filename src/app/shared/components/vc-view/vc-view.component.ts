@@ -299,6 +299,13 @@ export class VcViewComponent implements OnDestroy {
     }
   }
 
+  public verifyOnKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      void this.verifyCredential();
+    }
+  }
+
   public async verifyCredential(): Promise<void> {
     if (this.verifyLocked) return;
     this.verifyLocked = true;

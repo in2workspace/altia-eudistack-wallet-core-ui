@@ -148,7 +148,7 @@
             }
           </ul>
 
-          <ion-button expand="block" fill="outline" class="verify-button" [disabled]="verifyLocked" (click)="verifyCredential()">
+          <ion-button expand="block" fill="outline" class="verify-button" [disabled]="verifyLocked" (click)="verifyCredential()" (keydown)="verifyOnKeydown($event)">
             <ion-icon name="refresh-outline" slot="start"></ion-icon>
             {{ "verification.button" | translate }}
           </ion-button>

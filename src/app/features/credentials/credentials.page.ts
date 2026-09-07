@@ -74,7 +74,7 @@ export class CredentialsPage implements OnInit, ViewWillEnter {
   public readonly canInstall$ = this.pwaInstallService.installable$;
 
   private authorizationRequest = '';
-  private revokedCredentialIds = new Set<string>();
+  private readonly revokedCredentialIds = new Set<string>();
 
   /** Reactive credential list + load status, owned by CredentialCacheService. */
   public readonly credList = this.credentialCacheService.credentials;
