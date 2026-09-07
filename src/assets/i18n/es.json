@@ -116,7 +116,8 @@
     "errors": {
       "too-many-attempts": "Demasiados intentos. Por favor, inténtalo más tarde.",
       "too-many-attempts-otp": "Demasiados intentos incorrectos. Por favor, solicita un nuevo código.",
-      "passkey-register-failed": "No se ha podido registrar este dispositivo. Inténtalo de nuevo."
+      "passkey-register-failed": "No se ha podido registrar este dispositivo. Inténtalo de nuevo.",
+      "session-expired-request-code": "Tu sesión ha caducado. Solicita un código de verificación para seguir abriendo la oferta de credencial."
     }
   },
   "otp-input": {

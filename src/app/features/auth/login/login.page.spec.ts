@@ -398,4 +398,62 @@ describe('LoginPage (server mode)', () => {
       expect(mockRouter.navigateByUrl).toHaveBeenCalled();
     });
   });
+
+  describe('Dedalo-1052543: expired wallet session on LEAR Employee email deep-link', () => {
+    beforeEach(() => {
+      localStorage.setItem('wallet_refresh_token', 'stale-refresh');
+      sessionStorage.setItem(
+        PENDING_DEEP_LINK_KEY,
+        '/protocol/callback?credential_offer_uri=https://sandbox.stg.eudistack.net/issuer/oid4vci/v1/credential-offer/abc'
+      );
+      mockPrfService.hasPasskey.mockReturnValue(true);
+      mockPrfService.getCredentialId.mockReturnValue('cred-local-1');
+      Object.defineProperty(navigator, 'credentials', {
+        configurable: true,
+        value: {
+          get: jest.fn().mockResolvedValue({ id: 'assertion' }),
+        },
+      });
+    });
+
+    it('AC-01: on refresh failure, stays on email step with i18n session-expired and keeps the pending offer link', async () => {
+      mockAuthService.refreshAccessToken.mockReturnValue(
+        throwError(() => ({ status: 401, error: { detail: 'invalid_grant' } }))
+      );
+
+      component.ionViewWillEnter();
+      expect(component.step).toBe('passkey');
+
+      await component.verifyPasskey();
+
+      expect(component.step).toBe('email');
+      // Pre-fix: it uses hardcoded English string. We expect i18n key 'auth.errors.session-expired-request-code'
+      // so this test will fail as expected in Task 1 (it failed with the old string).
+      expect(component.errorMessage).toBe('auth.errors.session-expired-request-code');
+      expect(sessionStorage.getItem(PENDING_DEEP_LINK_KEY)).toContain('credential_offer_uri');
+      expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
+    });
+
+    it('AC-02: resumes deep link after successful OTP verification and passkey registration', async () => {
+      sessionStorage.setItem(
+        PENDING_DEEP_LINK_KEY,
+        '/protocol/callback?credential_offer_uri=https://offer-url'
+      );
+      component.email = 'user@example.com';
+      component.otpValue = '123456';
+      mockAuthService.verifyEmail.mockReturnValue(of({ accessToken: 'a', refreshToken: 'r', expiresIn: 900 }));
+      mockPasskeyApi.listPasskeys.mockReturnValue(of([])); // Force needsPasskeySetup = true
+
+      component.verifyCode();
+      expect(component.step).toBe('passkey');
+      expect(component.needsPasskeySetup).toBe(true);
+
+      // Now complete passkey registration
+      mockPasskeyApi.registerPasskey.mockReturnValue(of({ id: 'p1' }));
+      await component.createPasskeyForDevice();
+
+      expect(mockRouter.navigateByUrl).toHaveBeenCalledWith(expect.stringContaining('credential_offer_uri=https://offer-url'));
+      expect(sessionStorage.getItem(PENDING_DEEP_LINK_KEY)).toBeNull();
+    });
+  });
 });

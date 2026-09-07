@@ -422,16 +422,18 @@ export class LoginPage {
       await this.authenticateLocally();
 
       if (this.passkeyFromRefreshToken) {
-        await firstValueFrom((this.authService as RemoteAuthService).refreshAccessToken());
+        await firstValueFrom(
+          (this.authService as RemoteAuthService).refreshAccessToken({ onAuthFailure: 'clear-only' })
+        );
       }
 
       await this.syncCredentialsThenNavigate();
     } catch (err: any) {
       if (this.passkeyFromRefreshToken) {
-        localStorage.removeItem('wallet_refresh_token');
         this.passkeyFromRefreshToken = false;
         this.step = 'email';
-        this.errorMessage = 'Your session has expired. Please sign in again.';
+        this.errorMessage = this.translate.instant('auth.errors.session-expired-request-code');
+        // PENDING_DEEP_LINK_KEY must stay: auth.guard stored the offer URL.
       } else {
         this.errorMessage = err?.message || 'Passkey verification failed';
       }

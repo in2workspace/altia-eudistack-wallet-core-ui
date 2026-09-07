@@ -99,17 +99,22 @@ export class RemoteAuthService extends AuthService implements OnDestroy {
 
   // --- Token management ---
 
-  refreshAccessToken(): Observable<TokenPairResponse> {
+  refreshAccessToken(options?: { onAuthFailure?: 'force-logout' | 'clear-only' }): Observable<TokenPairResponse> {
     if (!this.refreshTokenValue) {
       return throwError(() => new Error('No refresh token'));
     }
+    const onAuthFailure = options?.onAuthFailure ?? 'force-logout';
     return this.http.post<TokenPairResponse>(`${this.authBase}/refresh`, {
       refreshToken: this.refreshTokenValue
     }).pipe(
       tap(response => this.handleTokenResponse(response)),
       catchError(err => {
         if (!this.disposed) {
-          this.forceLogout();
+          if (onAuthFailure === 'clear-only') {
+            this.clearState();
+          } else {
+            this.forceLogout();
+          }
         }
         return throwError(() => err);
       })
