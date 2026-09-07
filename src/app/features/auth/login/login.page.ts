@@ -241,6 +241,7 @@ export class LoginPage {
   needsPasskeySetup = false;
   deviceName = '';
   private passkeyFromRefreshToken = false;
+  private matchedPasskeyId: string | null = null;
 
   private readonly authService = inject(AuthService);
   private readonly prfService = inject(PasskeyPrfService);
@@ -392,14 +393,18 @@ export class LoginPage {
       takeUntilDestroyed(this.destroyRef)
     ).subscribe({
       next: (passkeys) => {
-        this.needsPasskeySetup = !localCredentialId
-          || !passkeys.some(passkey => passkey.credentialId === localCredentialId);
+        const matched = localCredentialId
+          ? passkeys.find(passkey => passkey.credentialId === localCredentialId)
+          : undefined;
+        this.matchedPasskeyId = matched?.id ?? null;
+        this.needsPasskeySetup = !matched;
         this.finishPasskeySetupStep();
       },
       error: (err) => {
         // Fail-safe: if we can't confirm the account's server-side devices, assume
         // it needs one rather than silently skipping registration.
         console.warn('[LoginPage] listPasskeys failed, defaulting to needsPasskeySetup=true', err);
+        this.matchedPasskeyId = null;
         this.needsPasskeySetup = true;
         this.finishPasskeySetupStep();
       }
@@ -423,6 +428,10 @@ export class LoginPage {
 
       if (this.passkeyFromRefreshToken) {
         await firstValueFrom((this.authService as RemoteAuthService).refreshAccessToken());
+      } else if (this.matchedPasskeyId) {
+        // Full re-auth (email+OTP) on a device that already had a passkey: the session
+        // issued by verify-email isn't attributed to any passkey yet (EUD-104 devices list).
+        await this.confirmCurrentSession(this.matchedPasskeyId);
       }
 
       await this.syncCredentialsThenNavigate();
@@ -463,7 +472,8 @@ export class LoginPage {
       await firstValueFrom(this.passkeyApi.registerPasskey({
         credentialId,
         displayName: this.deviceName.trim() || this.getDeviceName(),
-        userAgent: navigator.userAgent
+        userAgent: navigator.userAgent,
+        refreshToken: (this.authService as RemoteAuthService).getRefreshToken()
       }));
       await this.syncCredentialsThenNavigate();
     } catch {
@@ -474,6 +484,22 @@ export class LoginPage {
   }
 
   // --- Private helpers ---
+
+  /**
+   * Best-effort: attributes the session just authenticated to the passkey that verified
+   * it, so it appears as active in "My devices" (EUD-104). Must never block login — a
+   * failure here just leaves this session unattributed, same as before this fix.
+   */
+  private async confirmCurrentSession(passkeyId: string): Promise<void> {
+    const refreshToken = (this.authService as RemoteAuthService).getRefreshToken();
+    if (!refreshToken) return;
+
+    try {
+      await firstValueFrom(this.passkeyApi.confirmSession(passkeyId, refreshToken));
+    } catch (err) {
+      console.warn('[LoginPage] confirmSession failed, session will not appear in device list', err);
+    }
+  }
 
   private async authenticateLocally(): Promise<void> {
     const credentialId = this.prfService.getCredentialId();

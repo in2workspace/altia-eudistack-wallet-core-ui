@@ -132,6 +132,10 @@ export class RemoteAuthService extends AuthService implements OnDestroy {
     return this.accessToken ?? '';
   }
 
+  getRefreshToken(): string {
+    return this.refreshTokenValue ?? '';
+  }
+
   getName$(): Observable<string> {
     return this.name$.asObservable();
   }

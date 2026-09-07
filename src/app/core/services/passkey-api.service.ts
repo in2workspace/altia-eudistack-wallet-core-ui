@@ -16,6 +16,8 @@ export interface RegisterPasskeyRequest {
   credentialId: string;
   displayName: string;
   userAgent?: string;
+  /** Current session's refresh token, so the backend can attribute it to this passkey right away. */
+  refreshToken?: string;
 }
 
 /**
@@ -74,6 +76,14 @@ export class PasskeyApiService {
    */
   revokeSessions(id: string): Observable<void> {
     return this.http.post<void>(`${this.authBase}/passkeys/${id}/revoke-sessions`, {});
+  }
+
+  /**
+   * Attributes the current session to a passkey the caller just verified locally
+   * (WebAuthn assertion), so the devices list (US-006) reflects it as active.
+   */
+  confirmSession(id: string, refreshToken: string): Observable<void> {
+    return this.http.post<void>(`${this.authBase}/passkeys/${id}/confirm-session`, { refreshToken });
   }
 }
 

@@ -22,6 +22,7 @@ describe('LoginPage (server mode)', () => {
     register: jest.Mock;
     verifyEmail: jest.Mock;
     refreshAccessToken: jest.Mock;
+    getRefreshToken: jest.Mock;
   };
   let mockPrfService: {
     hasPasskey: jest.Mock;
@@ -29,7 +30,7 @@ describe('LoginPage (server mode)', () => {
     getCredentialId: jest.Mock;
   };
   let mockPasskeyStore: { getCredentialId: jest.Mock; hasPasskey: jest.Mock };
-  let mockPasskeyApi: { registerPasskey: jest.Mock; listPasskeys: jest.Mock };
+  let mockPasskeyApi: { registerPasskey: jest.Mock; listPasskeys: jest.Mock; confirmSession: jest.Mock };
   let mockRouter: { navigateByUrl: jest.Mock };
   let mockWalletService: { syncCredentials: jest.Mock };
   let mockActivityService: { syncFromServer: jest.Mock };
@@ -52,6 +53,7 @@ describe('LoginPage (server mode)', () => {
       register: jest.fn().mockReturnValue(of({ message: 'If the email is valid, you will receive a verification code.' })),
       verifyEmail: jest.fn().mockReturnValue(of({ accessToken: 'access-1', refreshToken: 'refresh-1', expiresIn: 900 })),
       refreshAccessToken: jest.fn().mockReturnValue(of({ accessToken: 'access-2', refreshToken: 'refresh-2', expiresIn: 900 })),
+      getRefreshToken: jest.fn().mockReturnValue('refresh-1'),
     };
     mockPrfService = {
       hasPasskey: jest.fn().mockReturnValue(false),
@@ -65,6 +67,7 @@ describe('LoginPage (server mode)', () => {
     mockPasskeyApi = {
       registerPasskey: jest.fn().mockReturnValue(of({ id: 'p1', credentialId: 'cred-local-1', displayName: 'device' })),
       listPasskeys: jest.fn().mockReturnValue(of([])),
+      confirmSession: jest.fn().mockReturnValue(of(undefined)),
     };
     mockRouter = { navigateByUrl: jest.fn() };
     mockWalletService = { syncCredentials: jest.fn().mockReturnValue(of(undefined)) };
