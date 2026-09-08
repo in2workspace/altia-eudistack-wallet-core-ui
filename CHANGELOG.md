@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Surfaced session expiry during passkey verification**: when a passkey login fails due to an expired refresh token (e.g., resuming a deep-link flow after a long period), the wallet now distinguishes between a WebAuthn failure (staying on the passkey step with the original error) and a token failure. Token failures now trigger a controlled state clearance (`onAuthFailure: 'clear-only'`) and return the holder to the initial email step with a dedicated "session expired" message (`auth.errors.session-expired-request-code`), instead of potentially leaving the wallet in an inconsistent state or showing a generic WebAuthn error.
+
+### Added
+
+- **Core services test coverage**: implemented full unit test suites for `passkey-api.service`, `local-auth.service`, `url-resolver.service`, `credential-decision.service`, `issuer-notification.service`, and `passkey-prf.service`, achieving >98% line coverage for the core service layer. `jest.config.js` was updated to include these services in the coverage reports.
+
+### Changed
+
+- **CodeQL-compliant test domains**: replaced generic `example.com` and `test.com` domains in `url-resolver.service.spec.ts` with `.local` suffixes to prevent static analysis tools from flagging literal URL strings as unescaped regular expressions.
+
+### Fixed
+
 - **Credential issuance failing at the token endpoint with `invalid_client` after a recent Issuer hardening**: the Issuer now requires OAuth Attestation-Based Client Authentication (`OAuth-Client-Attestation` / `OAuth-Client-Attestation-PoP` headers) on `POST /issuer/oauth/token` for the `haip` profile, not only on PAR — `ClientAttestationValidationService.validateHeaders()` is invoked from both `ParServiceImpl` and `TokenServiceImpl.authenticateClient()` in `eudistack-core-issuer`, since PAR having validated the attestation says nothing about who is presenting the authorization code minutes later. `AuthorizationCodeTokenService.exchangeCodeForToken()` only ever built the `DPoP` header for the token request; the attestation headers it fetches for PAR (`WiaService.fetchAttestationHeaders()`) were never re-fetched for the subsequent token exchange, so the Issuer rejected the request with `Missing OAuth-Client-Attestation header` / `invalid_client`. Fixed by requesting a fresh WIA+PoP pair for the token endpoint the same way PAR does — `WiaService` mints a new PoP JWT (fresh `jti`/`iat`, bound to `aud`) off the already-initialized instance key, so it isn't a PoP replay against the Issuer's jti cache (SEC-19). `aud` is set to `metadata.issuer` (falling back to the token endpoint URL), matching the `publicIssuerBaseUrl` the Issuer validates against, consistent with the PAR call's own audience choice.
 
 ### Added
