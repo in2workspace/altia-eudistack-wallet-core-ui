@@ -19,8 +19,8 @@ describe('UrlResolverService', () => {
   describe('serverUrl', () => {
     it('should return server_url from environment if present', () => {
       const original = environment.server_url;
-      (environment as any).server_url = 'https://api.test.com';
-      expect(service.serverUrl()).toBe('https://api.test.com');
+      (environment as any).server_url = 'https://api.local';
+      expect(service.serverUrl()).toBe('https://api.local');
       (environment as any).server_url = original;
     });
 
@@ -42,8 +42,8 @@ describe('UrlResolverService', () => {
   describe('websocketUrl', () => {
     it('should return websocket_url from environment if present', () => {
       const original = environment.websocket_url;
-      (environment as any).websocket_url = 'wss://ws.test.com';
-      expect(service.websocketUrl()).toBe('wss://ws.test.com');
+      (environment as any).websocket_url = 'wss://ws.local';
+      expect(service.websocketUrl()).toBe('wss://ws.local');
       (environment as any).websocket_url = original;
     });
 
@@ -65,9 +65,9 @@ describe('UrlResolverService', () => {
         (environment as any).websocket_url = undefined;
         const originalLocation = window.location;
         delete (window as any).location;
-        (window as any).location = { origin: 'https://wallet.example-domain.com' };
+        (window as any).location = { origin: 'https://wallet.local' };
 
-        expect(service.websocketUrl()).toBe('wss://wallet.example-domain.com/business-wallet');
+        expect(service.websocketUrl()).toBe('wss://wallet.local/business-wallet');
 
         (window as any).location = originalLocation;
       });
