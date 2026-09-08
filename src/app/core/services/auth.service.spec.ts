@@ -258,6 +258,53 @@ describe('RemoteAuthService', () => {
       const req = httpMock.expectOne(`${AUTH_BASE}/refresh`);
       req.flush({ detail: 'invalid_grant' }, { status: 401, statusText: 'Unauthorized' });
     });
+
+    it('clears refresh timer in clearState and softClearState', () => {
+      const timer = setTimeout(() => {}, 60_000);
+      (service as any).refreshTimer = timer;
+
+      (service as any).softClearState();
+      expect((service as any).refreshTimer).toBeNull();
+
+      const timer2 = setTimeout(() => {}, 60_000);
+      (service as any).refreshTimer = timer2;
+      (service as any).clearState();
+      expect((service as any).refreshTimer).toBeNull();
+    });
+
+    it('returns error if refreshAccessToken is called without a token', (done) => {
+      (service as any).refreshTokenValue = null;
+      service.refreshAccessToken().subscribe({
+        error: (err) => {
+          expect(err.message).toBe('No refresh token');
+          done();
+        }
+      });
+    });
+
+    it('handles cross-tab logout messages via BroadcastChannel (forceLogout)', () => {
+      const clearSpy = jest.spyOn(service as any, 'clearState');
+      const navigateSpy = jest.spyOn(routerMock, 'navigate');
+      passkeyStoreMock.hasPasskey.mockReturnValue(true);
+
+      // Simulate forced logout message
+      const channel = (service as any).broadcastChannel;
+      channel.onmessage({ data: 'forceWalletLogout' });
+
+      expect(clearSpy).toHaveBeenCalled();
+      expect(navigateSpy).toHaveBeenCalledWith(['/auth/login']);
+    });
+
+    it('handles cross-tab logout messages via BroadcastChannel (softWalletLogout)', () => {
+      const softClearSpy = jest.spyOn(service as any, 'softClearState');
+      const navigateSpy = jest.spyOn(routerMock, 'navigate');
+
+      const channel = (service as any).broadcastChannel;
+      channel.onmessage({ data: 'softWalletLogout' });
+
+      expect(softClearSpy).toHaveBeenCalled();
+      expect(navigateSpy).toHaveBeenCalledWith(['/auth/login']);
+    });
   });
 
   describe('getName$', () => {

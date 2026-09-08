@@ -489,4 +489,80 @@ describe('LoginPage (server mode)', () => {
       expect(mockAuthService.refreshAccessToken).not.toHaveBeenCalled();
     });
   });
+
+  describe('LoginPage Coverage Improvements', () => {
+    it('throws error in authenticateLocally if no credentialId is found', async () => {
+      mockPrfService.getCredentialId.mockReturnValue(null);
+      await expect(component['authenticateLocally']()).rejects.toThrow('No passkey found');
+    });
+
+    it('handles sync error in syncCredentialsThenNavigate for protocol links', async () => {
+      sessionStorage.setItem(PENDING_DEEP_LINK_KEY, '/protocol/callback?offer=123');
+      mockWalletService.syncCredentials.mockReturnValue(throwError(() => new Error('Sync failed')));
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const cacheSpy = jest.spyOn(mockCredentialCache, 'setError');
+
+      await component['syncCredentialsThenNavigate']();
+
+      expect(consoleSpy).toHaveBeenCalledWith('Credential sync failed', expect.any(Error));
+      expect(cacheSpy).toHaveBeenCalled();
+      expect(mockRouter.navigateByUrl).toHaveBeenCalled();
+    });
+
+    it('identifies different types of protocol deep links', () => {
+      expect(component['isProtocolDeepLink']('/protocol/test')).toBe(true);
+      expect(component['isProtocolDeepLink']('/wallet/protocol/test')).toBe(true);
+      expect(component['isProtocolDeepLink']('/tabs/vc-selector')).toBe(true);
+      expect(component['isProtocolDeepLink']('?credential_offer_uri=...')).toBe(true);
+      expect(component['isProtocolDeepLink']('/other')).toBe(false);
+      expect(component['isProtocolDeepLink'](null)).toBe(false);
+    });
+
+    it('detects device names correctly based on UserAgent', () => {
+      const originalUA = navigator.userAgent;
+      const setUA = (ua: string) => {
+        Object.defineProperty(navigator, 'userAgent', { value: ua, configurable: true });
+      };
+
+      setUA('iPhone'); expect(component['getDeviceName']()).toBe('iPhone');
+      setUA('Android'); expect(component['getDeviceName']()).toBe('Android Device');
+      setUA('Windows'); expect(component['getDeviceName']()).toBe('Windows PC');
+      setUA('Unknown'); expect(component['getDeviceName']()).toBe('Unknown Device');
+
+      setUA(originalUA);
+    });
+
+    it('handles passkey registration failure in createPasskeyForDevice', async () => {
+      component.email = 'test@example.com';
+      mockPrfService.createPasskey.mockRejectedValue(new Error('Hardware fail'));
+
+      await component.createPasskeyForDevice();
+
+      expect(component.errorMessage).toBe('Hardware fail');
+      expect(component.loading).toBe(false);
+    });
+
+    it('handles case where createPasskey succeeds but getCredentialId returns null', async () => {
+      component.email = 'test@example.com';
+      mockPrfService.createPasskey.mockResolvedValue('ok');
+      mockPasskeyStore.getCredentialId.mockReturnValue(null);
+
+      await component.createPasskeyForDevice();
+
+      expect(component.errorMessage).toBe('Failed to create passkey');
+      expect(component.loading).toBe(false);
+    });
+
+    it('handles sync error in syncCredentialCache (non-protocol link)', () => {
+      sessionStorage.removeItem(PENDING_DEEP_LINK_KEY);
+      mockWalletService.syncCredentials.mockReturnValue(throwError(() => new Error('Async sync failed')));
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const cacheSpy = jest.spyOn(mockCredentialCache, 'setError');
+
+      component['syncCredentialCache']();
+
+      expect(consoleSpy).toHaveBeenCalledWith('Sync failed', expect.any(Error));
+      expect(cacheSpy).toHaveBeenCalled();
+    });
+  });
 });
