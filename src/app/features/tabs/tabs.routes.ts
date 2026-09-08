@@ -10,9 +10,9 @@ const routes: Routes = [
       import('./tabs.page').then((m) => m.TabsPage),
     children: [
       {
-        path: 'home',
+        path: 'scan',
         loadComponent: () =>
-          import('../home/home.page').then((m) => m.HomePage),
+          import('../scan/scan.page').then((m) => m.ScanPage),
       },
       {
         path: 'credentials',
@@ -23,20 +23,6 @@ const routes: Routes = [
         path: 'settings',
         loadComponent: () =>
           import('../settings/settings.page').then((m) => m.SettingsPage),
-      },
-      {
-        path: 'language-selector',
-        loadComponent: () =>
-          import('../language-selector/language-selector.page').then(
-            (m) => m.LanguageSelectorPage
-          ),
-      },
-      {
-        path: 'camera-selector',
-        loadComponent: () =>
-          import('../camera-selector/camera-selector.page').then(
-            (m) => m.CameraSelectorPage
-          ),
       },
       {
         path: 'activity',
@@ -82,7 +68,7 @@ const routes: Routes = [
       },
       {
         path: '',
-        redirectTo: 'home',
+        redirectTo: 'credentials',
         pathMatch: 'full',
       },
       {

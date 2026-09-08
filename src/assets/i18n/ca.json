@@ -7,12 +7,17 @@
     "terms-of-user": "Termes d'Ús",
     "privacy-policy": "Política de Privacitat",
     "faqs": "FAQs",
+    "signed-in-as": "Sessió iniciada com a",
+    "activity": "Activitat",
+    "connected-devices": "Dispositius connectats",
     "settings": "Configuració",
+    "about": "Sobre",
     "logout": "Tancar sessió",
     "install": "Instal·lar app",
     "wallet": "Cartera"
   },
   "camera-selector": {
+    "device-label": "Càmera",
     "title": "Càmera seleccionada",
     "settings": "Configuració de la càmera",
     "no-device": "Sense dispositiu",
@@ -29,7 +34,16 @@
     "add": "Afegeix",
     "nocred": "No tens cap credencial carregada",
     "nocred-title": "Sense credencials",
-    "nocred-subtitle": "Escaneja un codi QR o accepta una oferta de credencial per començar.",
+    "nocred-subtitle": "Les teves credencials verificades apareixeran aquí quan s'afegeixin a la teva cartera.",
+    "nocred-scan": "Escaneja el codi QR",
+    "show-data": "Mostrar dades",
+    "hide-data": "Ocultar dades",
+    "how-it-works": {
+      "title": "Com funciona?",
+      "step-scan": "Escaneja un codi QR",
+      "step-add": "Afegeix la credencial",
+      "step-manage": "Gestiona-la aquí"
+    },
     "expiration": "Caducat",
     "expiring-soon": "Caduca aviat",
     "expiredCredential": "Credencial caducada",
@@ -50,7 +64,9 @@
     "install-hint": "Instal·la l'app per a una millor experiència"
   },
   "language-selector": {
-    "title": "Selector d'idioma"
+    "title": "Idioma",
+    "subtitle": "Tria l'idioma de la interfície de la cartera.",
+    "back-to-wallet": "Torna a la cartera"
   },
   "ui-translation": {
     "title": "No trobes el teu idioma?",
@@ -77,6 +93,26 @@
   },
   "mailto_permission_alert": "Assegureu-vos que teniu els permisos necessaris per enviar correus electrònics amb la vostra aplicació de correu predeterminada. Si el servei de correu no s'obre, probablement és a causa de restriccions de permisos.",
   "auth": {
+    "access": {
+      "title": "Accedeix a {{brand}} de forma segura",
+      "install-hint": "Per a la millor experiència i accés offline, instal·la l'app del wallet al teu dispositiu.",
+      "open-hint": "Si ja tens el Wallet de {{brand}}, obre'l per continuar. Si no, instal·la'l per començar.",
+      "continue-wallet": "Continuar amb el Wallet de {{brand}}",
+      "already-title": "Ja tens un Wallet de {{brand}}?",
+      "already-text": "Si el teu wallet ja està configurat en un altre dispositiu, les teves credencials existents es recuperaran.",
+      "help-link": "Necessites ajuda? Més informació",
+      "help": {
+        "title": "Necessites ajuda?",
+        "intro": "Si no pots escanejar el codi QR, introdueix el codi d'activació que t'han proporcionat.",
+        "q1": "Ja tinc un Wallet de {{brand}}. Necessito crear un compte nou?",
+        "a1": "No. Durant la configuració es recuperaran les teves credencials existents.",
+        "q2": "I si faig servir un dispositiu nou?",
+        "a2": "Et guiarem pels passos necessaris per accedir de forma segura al teu compte de {{brand}}.",
+        "q3": "Puc continuar sense instal·lar el Wallet?",
+        "a3": "Sí. Pots continuar al navegador, tot i que algunes funcionalitats poden estar limitades.",
+        "close": "Tancar"
+      }
+    },
     "login": {
       "title": "Registra el teu dispositiu",
       "title-welcome": "Benvingut",
@@ -84,7 +120,9 @@
       "create-passkey-subtitle": "La teva passkey manté el teu wallet segur. La faràs servir per iniciar sessió.",
       "passkey-button": "Iniciar sessió amb Passkey",
       "enter-email": "Introdueix el teu email per començar",
-      "verify-passkey": "Verifica la teva identitat amb la teva passkey"
+      "verify-passkey": "Verifica la teva identitat amb la teva passkey",
+      "email-title": "Continua amb el teu email",
+      "email-subtitle": "Introdueix l'adreça de correu associada al teu compte de {{brand}}."
     },
     "register": {
       "email-placeholder": "Introdueix el teu email",
@@ -95,7 +133,17 @@
       "install-title": "Instal·lar l'App",
       "install-subtitle": "Per a la millor experiència i accés offline, instal·la l'app del wallet al teu dispositiu.",
       "install-button": "Instal·lar App",
-      "continue-browser": "Continuar al navegador"
+      "continue-browser": "Continuar al navegador",
+      "email-label": "Email",
+      "verify-title": "Verifica la teva adreça de correu",
+      "code-sent-prefix": "Introdueix el codi de verificació enviat a la teva adreça de correu",
+      "code-validity": "El codi és vàlid durant un temps limitat.",
+      "code-label": "Codi",
+      "resend-in": "No has rebut el codi? Reenviament disponible en {{time}}",
+      "resend-prompt": "No has rebut el codi?",
+      "resend-action": "Reenviar",
+      "continue": "Continuar",
+      "back": "Enrere"
     },
     "passkey": {
       "title": "Configurar Passkey",
@@ -107,7 +155,11 @@
       "success": "Passkey registrada correctament!",
       "status-connecting": "Preparant...",
       "status-verifying": "Esperant el teu dispositiu...",
-      "retry": "Tornar-ho a provar"
+      "retry": "Tornar-ho a provar",
+      "verified-title": "Email verificat!",
+      "setup-title": "Configura una passkey",
+      "verified-subtitle": "El teu email s'ha verificat correctament.",
+      "setup-subtitle": "Configura una passkey per completar l'accés en aquest dispositiu."
     },
     "errors": {
       "too-many-attempts": "Massa intents. Si us plau, torna-ho a provar més tard.",
@@ -195,6 +247,7 @@
     "prf-inconclusive": "No s'ha pogut verificar si el teu autenticador és compatible amb PRF. Torna-ho a intentar o utilitza un altre dispositiu."
   },
   "settings": {
+    "theme": "Tema",
     "title": "Configuració",
     "privacy-blur": "Desenfocament de privacitat",
     "privacy-blur-desc": "Desenfoca les dades de les credencials",
@@ -208,6 +261,9 @@
     "wallet-mode-business": "Business Wallet"
   },
   "about": {
+    "subtitle": "Coneix més sobre la cartera, accedeix als recursos de suport i consulta la informació legal.",
+    "back-to-wallet": "Torna a la cartera",
+    "section-provider": "Proveïdor de la cartera",
     "section-info": "Informació de l'aplicació",
     "section-legal": "Legal",
     "section-support": "Suport",
@@ -221,7 +277,7 @@
     },
     "support": {
       "help-center": "Centre d'ajuda",
-      "email": "Contactar per email",
+      "email": "Contacta amb suport",
       "email-copy": "Copiar adreça",
       "email-copied": "Adreça copiada",
       "report-issue": "Reportar una incidència",
@@ -282,16 +338,34 @@
     "unsigned-header": "Credencial sense signar",
     "unsigned-message": "La seva credencial encara no ha estat signada i no pot ser utilitzada. Esperi que l'emissor completi el procés de signatura.",
     "revoked": "Revocat",
-    "delete-success": "Credencial eliminada correctament"
+    "delete-success": "Credencial eliminada correctament",
+    "badge-verified": "Credencial verificada",
+    "badge-expired": "Credencial caducada",
+    "badge-revoked": "Credencial revocada",
+    "preview-name": "Nom",
+    "preview-issuer": "ID de l'emissor",
+    "preview-status": "Estat",
+    "preview-expiry": "Caducitat",
+    "lifecycle-valid": "Vàlida",
+    "lifecycle-issued": "Sense signar",
+    "lifecycle-revoked": "Revocada",
+    "lifecycle-expired": "Caducada"
   },
   "scanner": {
-    "initializing": "Inicialitzant escàner...",
-    "manualInput": "O enganxa el contingut del QR manualment:",
-    "manualInputPlaceholder": "Enganxa aquí el contingut del codi QR...",
-    "send": "Enviar"
+    "title": "Escaneja el teu codi QR",
+    "subtitle": "Utilitza la càmera del teu dispositiu per escanejar el codi QR",
+    "manual-hint": "No pots escanejar el codi QR?",
+    "manual-link": "Introdueix el codi manualment",
+    "manual-title": "Introdueix el codi manualment",
+    "manual-description": "Si no pots escanejar el codi QR, introdueix el codi d'activació que t'han facilitat.",
+    "manual-label": "Codi d'accés",
+    "manual-placeholder": "Introdueix el codi d'accés",
+    "manual-back": "Torna a escanejar el codi QR",
+    "manual-continue": "Continua",
+    "initializing": "Inicialitzant escàner..."
   },
   "vc-fields": {
-    "delete": "Eliminar",
+    "delete": "Eliminar credencial",
     "copy-success": "S'ha copiat al porta-retalls",
     "modal-title": "Detalls de credencial",
     "title": "Informació de credencials",
@@ -376,26 +450,29 @@
       "delete": "Eliminar",
       "attest": "Acreditar",
       "upload": "Pujar"
-    }
+    },
+    "issued-by": "Emesa per"
   },
   "activity": {
     "title": "Activitat",
-    "filter-all": "Totes",
+    "back-to-wallet": "Torna a la cartera",
+    "filter-all": "Tota l'activitat",
     "filter-issued": "Rebudes",
     "filter-presented": "Presentades",
     "filter-deleted": "Eliminades",
-    "empty": "Sense activitat",
-    "empty-hint": "L'activitat de les teves credencials apareixerà aquí",
+    "empty": "Encara no hi ha activitat",
+    "empty-hint": "Les teves accions recents a la cartera apareixeran aquí.",
+    "empty-cta": "Afegeix una credencial",
     "empty-issued": "Sense credencials rebudes",
     "empty-presented": "Sense credencials presentades",
     "empty-deleted": "Sense credencials eliminades",
-    "clear": "Esborrar",
+    "clear": "Esborra l'historial",
     "clear-confirm": "Esborrar tota l'activitat?",
     "clear-title": "Vols esborrar el teu historial d'activitat?",
     "clear-description": "Això eliminarà permanentment tots els registres d'activitat del teu moneder. Aquesta acció no es pot desfer.",
     "clear-cancel": "Cancel·la",
-    "clear-action": "Sí, esborrar",
-    "export": "Exporta l'historial",
+    "clear-action": "Esborra l'historial",
+    "export": "Exporta l'historial d'activitat",
     "csv-header-type": "Tipus",
     "csv-header-credential": "Credencial",
     "csv-header-counterparty": "Contrapart",
@@ -408,7 +485,9 @@
     "type-unknown": "Activitat",
     "subtitle-issued": "Rebut de {{counterparty}}",
     "subtitle-presented": "Presentat a {{counterparty}}",
+    "subtitle-deleted": "Emesa per {{counterparty}}",
     "time-now": "Ara",
+    "date-today": "Avui",
     "time-minutes": "Fa {{count}}min",
     "time-hours": "Fa {{count}}h",
     "time-days": "Fa {{count}}d",
@@ -424,9 +503,20 @@
     "detail-shared-attributes-empty": "No s'han registrat atributs compartits per a aquesta presentació."
   },
   "devices": {
+    "back-to-wallet": "Torna a la cartera",
+    "section-current": "Dispositiu actual",
+    "section-others": "Altres dispositius connectats",
+    "last-active": "Última activitat",
+    "added-on": "Afegit el",
+    "remove-device": "Elimina el dispositiu",
+    "close-sessions": "Tanca les sessions",
+    "no-other-devices-title": "No hi ha altres dispositius connectats",
+    "no-other-devices-hint": "La teva cartera només està disponible en aquest dispositiu.",
+    "no-current-device-title": "Aquest dispositiu no està registrat",
+    "no-current-device-hint": "No hem pogut associar aquest navegador amb cap dispositiu registrat. Inicia la sessió de nou des d’aquí per registrar-lo.",
     "settings-link": "Els Meus Dispositius",
-    "title": "Els Meus Dispositius",
-    "subtitle": "Gestiona les passkeys registrades al teu compte",
+    "title": "Dispositius connectats",
+    "subtitle": "Gestiona els dispositius vinculats a la teva cartera i revoca l’accés quan calgui.",
     "rename-header": "Canviar nom de Passkey",
     "rename-placeholder": "Introdueix un nou nom",
     "rename-confirm": "Canviar nom",
@@ -448,7 +538,7 @@
     "this-device": "Aquest dispositiu"
   },
   "verification": {
-    "button": "Verificar Credencial",
+    "button": "Comprovar l'estat de la credencial",
     "modal-title": "Verificació de Credencial",
     "verifying": "Verificant credencial...",
     "result-valid": "La credencial és vàlida",
@@ -463,14 +553,22 @@
     "detail-revoked": "Revocada",
     "detail-no-status-list": "Sense llista d'estat",
     "detail-no-expiry": "Sense data de caducitat",
-    "detail-check-error": "No s'ha pogut verificar"
+    "detail-check-error": "No s'ha pogut verificar",
+    "card-title": "Verificació de la credencial",
+    "row-issuance": "Data d'emissió",
+    "row-expiration": "Data de caducitat",
+    "row-issuer": "Emissor",
+    "row-revocation": "Estat de revocació"
   },
   "confirmation": {
+    "decline": "Rebutja",
+    "accept-credential": "Accepta la credencial",
+    "review-within": "Revisa i confirma abans de {{time}}",
     "header": "Enviar credencial?",
     "ok": "Ok",
     "cancel": "Cancel·lar",
     "new-credential": "Vols acceptar aquesta credencial?",
-    "new-credential-title": "Nova credencial",
+    "new-credential-title": "Verifica les dades de la teva nova credencial",
     "accept": "Acceptar",
     "pin": "Introdueix el PIN",
     "description": "S'ha enviat un codi PIN al teu email. Revisa'l i introdueix el PIN.",
@@ -487,13 +585,13 @@
     "type-window": "finestra",
     "type-tab": "pestanya",
     "title-deep-link": "Credencial enviada a EUDI Wallet",
-    "title-already-open": "EUDI Wallet ja est\u00e0 obert",
+    "title-already-open": "EUDI Wallet ja està obert",
     "subtitle-deep-link": "La credencial s'ha enviat a la {{type}} activa de EUDI Wallet. Pots tancar aquesta {{type}}.",
     "subtitle-already-open": "Ja tens EUDI Wallet obert en una altra {{type}}. Pots tancar aquesta.",
     "hint-standalone": "Torna a l'altra finestra de EUDI Wallet.",
     "hint-tab": "Usa Ctrl+Tab per tornar a la pestanya activa.",
     "close-fallback-standalone": "Tanca aquesta finestra manualment",
-    "close-fallback-tab": "Tanca aquesta pestanya amb Ctrl+W (\u2318+W a Mac)",
+    "close-fallback-tab": "Tanca aquesta pestanya amb Ctrl+W (⌘+W a Mac)",
     "close-button": "Tanca aquesta {{type}}"
   },
   "tenantNotFound": {

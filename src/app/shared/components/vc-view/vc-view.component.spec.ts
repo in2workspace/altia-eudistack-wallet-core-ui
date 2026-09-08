@@ -634,7 +634,7 @@ describe('VcViewComponent', () => {
       await fixture.whenStable();
       fixture.detectChanges();
 
-      const field = fixture.nativeElement.querySelector('.card-field');
+      const field = fixture.nativeElement.querySelector('.card-preview__value');
       expect(field.getAttribute('translate')).toBe('no');
     });
 
@@ -672,15 +672,54 @@ describe('VcViewComponent', () => {
 
       it.each([
         ['card title', '{{ displayName() || credentialType }}'],
-        ['card field value', '{{ field.value }}'],
-        ['structured field label', '{{ item.label }}'],
-        ['structured field value', '{{ item.value }}'],
-        ['verification modal content container', 'class="verify-modal-content"'],
-        ['verification check detail (issuer/dates)', '{{ check.detail | translate }}'],
+        ['card preview value', '{{ field.value }}'],
+        ['drawer issuer name', '{{ issuedBy }}'],
+        ['drawer content container', 'class="drawer-content"'],
+        ['verification row value (issuer/dates)', '{{ row.value }}'],
+        ['power name', '{{ item.label }}'],
+        ['power action', '{{ action }}'],
+        ['claim field value', '[title]="field.value"'],
       ])('%s carries [attr.translate]="\'no\'"', (_name, needle) => {
         expect(openingTagContaining(needle)).toContain('[attr.translate]="\'no\'"');
       });
     });
   });
 
+
+  describe('verifyOnKeydown', () => {
+    function keydown(key: string): KeyboardEvent {
+      const event = new KeyboardEvent('keydown', { key, cancelable: true });
+      component.verifyOnKeydown(event);
+      return event;
+    }
+
+    it('runs the verification on Enter and suppresses the synthetic click', () => {
+      const spy = jest.spyOn(component, 'verifyCredential').mockResolvedValue(undefined);
+
+      const event = keydown('Enter');
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      // ion-button renders a native <button>, which fires click on Enter/Space by
+      // itself. Without preventDefault the handler and the click would both run.
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('runs the verification on Space and suppresses the synthetic click', () => {
+      const spy = jest.spyOn(component, 'verifyCredential').mockResolvedValue(undefined);
+
+      const event = keydown(' ');
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('ignores any other key', () => {
+      const spy = jest.spyOn(component, 'verifyCredential').mockResolvedValue(undefined);
+
+      const event = keydown('Tab');
+
+      expect(spy).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
+    });
+  });
 });
