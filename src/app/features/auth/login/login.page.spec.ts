@@ -449,12 +449,12 @@ describe('LoginPage (server mode)', () => {
       });
 
       component.ionViewWillEnter();
-      expect(component.step).toBe('passkey');
+      expect(component.step()).toBe('passkey');
 
       await component.verifyPasskey();
 
       expect(mockAuthService.refreshAccessToken).toHaveBeenCalledWith({ onAuthFailure: 'clear-only' });
-      expect(component.step).toBe('email');
+      expect(component.step()).toBe('email');
       expect(component.errorMessage).toBe('auth.errors.session-expired-request-code');
       expect(localStorage.getItem('wallet_refresh_token')).toBeNull();
       expect(sessionStorage.getItem(PENDING_DEEP_LINK_KEY)).toContain('credential_offer_uri');
@@ -470,7 +470,7 @@ describe('LoginPage (server mode)', () => {
       component.ionViewWillEnter();
       await component.verifyPasskey();
 
-      expect(component.step).toBe('email');
+      expect(component.step()).toBe('email');
       expect(component.errorMessage).toBe('auth.errors.session-expired-request-code');
       expect(sessionStorage.getItem(PENDING_DEEP_LINK_KEY)).toBeTruthy();
 
@@ -481,7 +481,7 @@ describe('LoginPage (server mode)', () => {
       mockPasskeyApi.listPasskeys.mockReturnValue(of([])); // Force needsPasskeySetup = true
 
       component.verifyCode();
-      expect(component.step).toBe('passkey');
+      expect(component.step()).toBe('passkey');
       expect(component.needsPasskeySetup).toBe(true);
 
       // 3. Complete passkey registration
@@ -504,12 +504,12 @@ describe('LoginPage (server mode)', () => {
 
       localStorage.setItem('wallet_refresh_token', 'stale-refresh');
       component.ionViewWillEnter();
-      expect(component.step).toBe('passkey');
+      expect(component.step()).toBe('passkey');
 
       await component.verifyPasskey();
 
       // Result: user stays on passkey screen and token is still there
-      expect(component.step).toBe('passkey');
+      expect(component.step()).toBe('passkey');
       expect(component.errorMessage).toBe('Authentication cancelled');
       expect(localStorage.getItem('wallet_refresh_token')).toBe('stale-refresh');
       expect(mockAuthService.refreshAccessToken).not.toHaveBeenCalled();
@@ -594,15 +594,15 @@ describe('LoginPage (server mode)', () => {
     it('PWA installation: promptInstall and skipInstall', async () => {
       const pwaInstallService = TestBed.inject(PwaInstallService);
       const promptSpy = jest.spyOn(pwaInstallService, 'promptInstall').mockResolvedValue(true);
-      component.showInstallScreen = true;
+      component.showInstallScreen.set(true);
 
       await component.installApp();
       expect(promptSpy).toHaveBeenCalled();
-      expect(component.showInstallScreen).toBe(false);
+      expect(component.showInstallScreen()).toBe(false);
 
-      component.showInstallScreen = true;
+      component.showInstallScreen.set(true);
       component.skipInstall();
-      expect(component.showInstallScreen).toBe(false);
+      expect(component.showInstallScreen()).toBe(false);
     });
 
     it('Browser mode: login and passkey creation', async () => {
@@ -621,7 +621,7 @@ describe('LoginPage (server mode)', () => {
       // Local login
       await component.loginBrowserMode();
       expect(markSpy).toHaveBeenCalled();
-      expect(navigateSpy).toHaveBeenCalledWith('/tabs/home');
+      expect(navigateSpy).toHaveBeenCalledWith('/tabs/credentials');
 
       // Local setup
       await component.createWalletBrowserMode();
@@ -654,14 +654,14 @@ describe('LoginPage (server mode)', () => {
       expect((component as any).otpValue).toBe('123456');
       expect(verifySpy).toHaveBeenCalled();
 
-      component.step = 'code';
+      component.step.set('code');
       component.goBackToEmail();
-      expect(component.step).toBe('email');
+      expect(component.step()).toBe('email');
       expect((component as any).otpValue).toBe('');
     });
 
     it('verifyPasskey: handles error when NOT using refresh token path', async () => {
-      component.step = 'passkey';
+      component.step.set('passkey');
       (component as any).passkeyFromRefreshToken = false;
       jest.spyOn(component as any, 'authenticateLocally').mockResolvedValue(undefined);
       mockRouter.navigateByUrl.mockImplementation(() => { throw new Error('Sync failed'); });
@@ -669,11 +669,11 @@ describe('LoginPage (server mode)', () => {
       await component.verifyPasskey();
 
       expect(component.errorMessage).toBe('Sync failed');
-      expect(component.step).toBe('passkey');
+      expect(component.step()).toBe('passkey');
     });
 
     it('verifyPasskey: uses default error message if error has no message', async () => {
-      component.step = 'passkey';
+      component.step.set('passkey');
       (component as any).passkeyFromRefreshToken = false;
       jest.spyOn(component as any, 'authenticateLocally').mockResolvedValue(undefined);
       mockRouter.navigateByUrl.mockImplementation(() => { throw {}; });
@@ -681,7 +681,7 @@ describe('LoginPage (server mode)', () => {
       await component.verifyPasskey();
 
       expect(component.errorMessage).toBe('Passkey verification failed');
-      expect(component.step).toBe('passkey');
+      expect(component.step()).toBe('passkey');
     });
 
     it('getDeviceName: covers all OS branches', () => {
@@ -705,7 +705,7 @@ describe('LoginPage (server mode)', () => {
 
       component.sendCode();
 
-      expect(component.step).toBe('code');
+      expect(component.step()).toBe('code');
       expect(component.loading).toBe(false);
     });
   });

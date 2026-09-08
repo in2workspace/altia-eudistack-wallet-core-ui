@@ -369,7 +369,7 @@ export class LoginPage implements OnDestroy {
       if (this.passkeyFromRefreshToken) {
         // Token has expired: return to the start of the flow with recovery message
         this.passkeyFromRefreshToken = false;
-        this.step = 'email';
+        this.step.set('email');
         this.errorMessage = this.translate.instant('auth.errors.session-expired-request-code');
         // PENDING_DEEP_LINK_KEY stays intact to allow resumption after OTP
       } else {
