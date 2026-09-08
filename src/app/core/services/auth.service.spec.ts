@@ -295,6 +295,28 @@ describe('RemoteAuthService', () => {
       expect(navigateSpy).toHaveBeenCalledWith(['/auth/login']);
     });
 
+    it('handles cross-tab logout messages via BroadcastChannel (forceLogout) when no passkey', () => {
+      const clearSpy = jest.spyOn(service as any, 'clearState');
+      const navigateSpy = jest.spyOn(routerMock, 'navigate');
+      passkeyStoreMock.hasPasskey.mockReturnValue(false);
+
+      const channel = (service as any).broadcastChannel;
+      channel.onmessage({ data: 'forceWalletLogout' });
+
+      expect(clearSpy).toHaveBeenCalled();
+      expect(navigateSpy).toHaveBeenCalledWith(['/auth/register']);
+    });
+
+    it('listenToCrossTabLogout: returns if disposed', () => {
+      const clearSpy = jest.spyOn(service as any, 'clearState');
+      service.dispose();
+
+      const channel = (service as any).broadcastChannel;
+      channel.onmessage({ data: 'forceWalletLogout' });
+
+      expect(clearSpy).not.toHaveBeenCalled();
+    });
+
     it('handles cross-tab logout messages via BroadcastChannel (softWalletLogout)', () => {
       const softClearSpy = jest.spyOn(service as any, 'softClearState');
       const navigateSpy = jest.spyOn(routerMock, 'navigate');
@@ -369,6 +391,127 @@ describe('RemoteAuthService', () => {
       const disposeSpy = jest.spyOn(service, 'dispose');
       service.ngOnDestroy();
       expect(disposeSpy).toHaveBeenCalled();
+    });
+
+    describe('Coverage improvements', () => {
+      it('handleTokenResponse: uses name if email is missing in JWT payload', (done) => {
+        const payload = { name: 'John Doe' };
+        const token = `abc.${btoa(JSON.stringify(payload))}.xyz`;
+
+        (service as any).handleTokenResponse({
+          accessToken: token,
+          refreshToken: 'ref',
+          expiresIn: 3600
+        });
+
+        service.getName$().subscribe(name => {
+          expect(name).toBe('John Doe');
+          done();
+        });
+      });
+
+      it('handleTokenResponse: uses empty string if both email and name are missing', (done) => {
+        const payload = {};
+        const token = `abc.${btoa(JSON.stringify(payload))}.xyz`;
+
+        (service as any).handleTokenResponse({
+          accessToken: token,
+          refreshToken: 'ref',
+          expiresIn: 3600
+        });
+
+        service.getName$().subscribe(name => {
+          expect(name).toBe('');
+          done();
+        });
+      });
+
+      it('handleTokenResponse: handles malformed JWT payload', (done) => {
+        const token = `abc.invalid-base64.xyz`;
+        (service as any).handleTokenResponse({
+          accessToken: token,
+          refreshToken: 'ref',
+          expiresIn: 3600
+        });
+        service.getName$().subscribe(name => {
+          expect(name).toBe('');
+          done();
+        });
+      });
+
+      it('isLoggedIn$ and isInitialized$ observables', (done) => {
+        let count = 0;
+        service.isLoggedIn$().subscribe(val => {
+          if (count === 0) expect(val).toBe(false);
+          if (count === 1) {
+            expect(val).toBe(true);
+            done();
+          }
+          count++;
+        });
+        service.isInitialized$().subscribe(val => expect(val).toBe(true));
+        (service as any).authenticated$.next(true);
+      });
+
+      it('handleTokenResponse: returns if disposed', () => {
+        service.dispose();
+        const spy = jest.spyOn(Storage.prototype, 'setItem');
+        (service as any).handleTokenResponse({ accessToken: 'a.b.c', refreshToken: 'r', expiresIn: 10 });
+        expect(spy).not.toHaveBeenCalled();
+        spy.mockRestore();
+      });
+
+      it('preloadIssuerMetadata: handles resolution error gracefully', async () => {
+        const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+        const tenantServiceMock = TestBed.inject(TenantService);
+        jest.spyOn(tenantServiceMock, 'resolveIssuerBaseUrl').mockRejectedValue(new Error('Resolution failed'));
+
+        await (service as any).preloadIssuerMetadata();
+
+        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Failed to resolve issuer URL'), expect.any(Error));
+        consoleSpy.mockRestore();
+      });
+
+      it('preloadIssuerMetadata: returns if disposed after async call', async () => {
+        const issuerMetadataCacheMock = TestBed.inject(IssuerMetadataCacheService);
+        const tenantServiceMock = TestBed.inject(TenantService);
+        const cacheSpy = jest.spyOn(issuerMetadataCacheMock, 'fetchAndCacheIfMissing');
+        jest.spyOn(tenantServiceMock, 'resolveIssuerBaseUrl').mockImplementation(async () => {
+          service.dispose();
+          return 'https://issuer.com';
+        });
+
+        await (service as any).preloadIssuerMetadata();
+        expect(cacheSpy).not.toHaveBeenCalled();
+      });
+
+      it('scheduleTokenRefresh: clears existing timer before setting new one', () => {
+        const clearSpy = jest.spyOn(globalThis, 'clearTimeout');
+        (service as any).refreshTimer = 123;
+        (service as any).scheduleTokenRefresh(3600);
+        expect(clearSpy).toHaveBeenCalledWith(123);
+      });
+
+      it('scheduleTokenRefresh: triggers forceLogout on refresh error if not disposed', (done) => {
+        jest.useFakeTimers();
+        const forceLogoutSpy = jest.spyOn(service, 'forceLogout').mockImplementation();
+
+        (service as any).refreshTokenValue = 'valid-refresh';
+        (service as any).scheduleTokenRefresh(60); // refreshInMs = 0
+
+        jest.runAllTimers();
+
+        const req = httpMock.expectOne(`${AUTH_BASE}/refresh`);
+        req.flush('Error', { status: 500, statusText: 'Server Error' });
+
+        // Use a small delay to allow the subscribe error block to run
+        setTimeout(() => {
+          expect(forceLogoutSpy).toHaveBeenCalled();
+          jest.useRealTimers();
+          done();
+        }, 0);
+        jest.runAllTimers();
+      });
     });
   });
 });

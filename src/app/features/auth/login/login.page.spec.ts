@@ -564,5 +564,123 @@ describe('LoginPage (server mode)', () => {
       expect(consoleSpy).toHaveBeenCalledWith('Sync failed', expect.any(Error));
       expect(cacheSpy).toHaveBeenCalled();
     });
+
+    it('PWA installation: promptInstall and skipInstall', async () => {
+      const pwaInstallService = TestBed.inject(PwaInstallService);
+      const promptSpy = jest.spyOn(pwaInstallService, 'promptInstall').mockResolvedValue(true);
+      component.showInstallScreen = true;
+
+      await component.installApp();
+      expect(promptSpy).toHaveBeenCalled();
+      expect(component.showInstallScreen).toBe(false);
+
+      component.showInstallScreen = true;
+      component.skipInstall();
+      expect(component.showInstallScreen).toBe(false);
+    });
+
+    it('Browser mode: login and passkey creation', async () => {
+      // Re-configure for browser mode
+      Object.defineProperty(component, 'isBrowserMode', { value: true });
+      jest.spyOn(component as any, 'authenticateLocally').mockResolvedValue(undefined);
+
+      const markSpy = jest.fn();
+      (mockAuthService as any).markAuthenticated = markSpy;
+
+      const setupSpy = jest.fn().mockResolvedValue(undefined);
+      (mockAuthService as any).setupPasskey = setupSpy;
+
+      const navigateSpy = jest.spyOn(mockRouter, 'navigateByUrl');
+
+      // Local login
+      await component.loginBrowserMode();
+      expect(markSpy).toHaveBeenCalled();
+      expect(navigateSpy).toHaveBeenCalledWith('/tabs/home');
+
+      // Local setup
+      await component.createWalletBrowserMode();
+      expect(setupSpy).toHaveBeenCalled();
+      expect(navigateSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it('Browser mode: handles failures in login and setup', async () => {
+      Object.defineProperty(component, 'isBrowserMode', { value: true });
+
+      // Test default error message for setup
+      (mockAuthService as any).setupPasskey = jest.fn().mockRejectedValue({});
+      await component.createWalletBrowserMode();
+      expect(component.errorMessage).toBe('Failed to create passkey');
+
+      // authenticateLocally fail
+      jest.spyOn(component as any, 'authenticateLocally').mockRejectedValue(new Error('Local fail'));
+      await component.loginBrowserMode();
+      expect(component.errorMessage).toBe('Local fail');
+
+      // Test default error message for login
+      jest.spyOn(component as any, 'authenticateLocally').mockRejectedValue({});
+      await component.loginBrowserMode();
+      expect(component.errorMessage).toBe('Login failed');
+    });
+
+    it('OTP flow: onOtpCompleted and goBackToEmail', () => {
+      const verifySpy = jest.spyOn(component, 'verifyCode').mockImplementation();
+      component.onOtpCompleted('123456');
+      expect((component as any).otpValue).toBe('123456');
+      expect(verifySpy).toHaveBeenCalled();
+
+      component.step = 'code';
+      component.goBackToEmail();
+      expect(component.step).toBe('email');
+      expect((component as any).otpValue).toBe('');
+    });
+
+    it('verifyPasskey: handles error when NOT using refresh token path', async () => {
+      component.step = 'passkey';
+      (component as any).passkeyFromRefreshToken = false;
+      jest.spyOn(component as any, 'authenticateLocally').mockResolvedValue(undefined);
+      mockRouter.navigateByUrl.mockImplementation(() => { throw new Error('Sync failed'); });
+
+      await component.verifyPasskey();
+
+      expect(component.errorMessage).toBe('Sync failed');
+      expect(component.step).toBe('passkey');
+    });
+
+    it('verifyPasskey: uses default error message if error has no message', async () => {
+      component.step = 'passkey';
+      (component as any).passkeyFromRefreshToken = false;
+      jest.spyOn(component as any, 'authenticateLocally').mockResolvedValue(undefined);
+      mockRouter.navigateByUrl.mockImplementation(() => { throw {}; });
+
+      await component.verifyPasskey();
+
+      expect(component.errorMessage).toBe('Passkey verification failed');
+      expect(component.step).toBe('passkey');
+    });
+
+    it('getDeviceName: covers all OS branches', () => {
+      const setUA = (ua: string) => {
+        Object.defineProperty(navigator, 'userAgent', { value: ua, configurable: true });
+      };
+      const originalUA = navigator.userAgent;
+
+      setUA('iPad'); expect(component['getDeviceName']()).toBe('iPad');
+      setUA('Macintosh'); expect(component['getDeviceName']()).toBe('Mac');
+      setUA('Windows'); expect(component['getDeviceName']()).toBe('Windows PC');
+      setUA('Linux'); expect(component['getDeviceName']()).toBe('Linux');
+      setUA('Other'); expect(component['getDeviceName']()).toBe('Unknown Device');
+
+      setUA(originalUA);
+    });
+
+    it('sendCode: navigates to code step on success', () => {
+      component.email = 'test@example.com';
+      mockAuthService.register.mockReturnValue(of({ message: 'OK' }));
+
+      component.sendCode();
+
+      expect(component.step).toBe('code');
+      expect(component.loading).toBe(false);
+    });
   });
 });
