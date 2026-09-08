@@ -199,6 +199,67 @@ describe('RemoteAuthService', () => {
     });
   });
 
+  describe('refreshAccessToken', () => {
+    it('should POST to /refresh and update tokens on success', (done) => {
+      const tokenResponse: TokenPairResponse = {
+        accessToken: 'eyJhbGciOiJSUzI1NiJ9.' + btoa(JSON.stringify({ sub: 'uuid-1' })) + '.sig',
+        refreshToken: 'new-refresh',
+        expiresIn: 900,
+      };
+      (service as any).refreshTokenValue = 'old-refresh';
+
+      service.refreshAccessToken().subscribe(() => {
+        expect(service.getToken()).toBe(tokenResponse.accessToken);
+        expect((service as any).refreshTokenValue).toBe('new-refresh');
+        expect(localStorage.getItem('wallet_refresh_token')).toBe('new-refresh');
+        done();
+      });
+
+      const req = httpMock.expectOne(`${AUTH_BASE}/refresh`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ refreshToken: 'old-refresh' });
+      req.flush(tokenResponse);
+    });
+
+    it('should trigger forceLogout and navigation by default on 401 failure', (done) => {
+      (service as any).refreshTokenValue = 'stale-rt';
+      (service as any).authenticated$.next(true);
+      passkeyStoreMock.hasPasskey.mockReturnValue(true);
+
+      service.refreshAccessToken().subscribe({
+        error: () => {
+          expect(service.getToken()).toBe('');
+          expect(service.isLoggedIn()).toBe(false);
+          expect(localStorage.getItem('wallet_refresh_token')).toBeNull();
+          expect(routerMock.navigate).toHaveBeenCalledWith(['/auth/login']);
+          done();
+        }
+      });
+
+      const req = httpMock.expectOne(`${AUTH_BASE}/refresh`);
+      req.flush({ detail: 'invalid_grant' }, { status: 401, statusText: 'Unauthorized' });
+    });
+
+    it('should ONLY clear state without navigation when onAuthFailure is "clear-only"', (done) => {
+      (service as any).refreshTokenValue = 'stale-rt';
+      (service as any).authenticated$.next(true);
+      localStorage.setItem('wallet_refresh_token', 'stale-rt');
+
+      service.refreshAccessToken({ onAuthFailure: 'clear-only' }).subscribe({
+        error: () => {
+          expect(service.getToken()).toBe('');
+          expect(service.isLoggedIn()).toBe(false);
+          expect(localStorage.getItem('wallet_refresh_token')).toBeNull();
+          expect(routerMock.navigate).not.toHaveBeenCalled();
+          done();
+        }
+      });
+
+      const req = httpMock.expectOne(`${AUTH_BASE}/refresh`);
+      req.flush({ detail: 'invalid_grant' }, { status: 401, statusText: 'Unauthorized' });
+    });
+  });
+
   describe('getName$', () => {
     it('should emit empty string initially', (done) => {
       service.getName$().subscribe((name) => {

@@ -416,29 +416,39 @@ describe('LoginPage (server mode)', () => {
       });
     });
 
-    it('AC-01: on refresh failure, stays on email step with i18n session-expired and keeps the pending offer link', async () => {
-      mockAuthService.refreshAccessToken.mockReturnValue(
-        throwError(() => ({ status: 401, error: { detail: 'invalid_grant' } }))
-      );
+    it('AC-01: on refresh failure, stays on email step with i18n session-expired, clears token and keeps the pending offer link', async () => {
+      mockAuthService.refreshAccessToken.mockImplementation(() => {
+        localStorage.removeItem('wallet_refresh_token');
+        return throwError(() => ({ status: 401, error: { detail: 'invalid_grant' } }));
+      });
 
       component.ionViewWillEnter();
       expect(component.step).toBe('passkey');
 
       await component.verifyPasskey();
 
+      expect(mockAuthService.refreshAccessToken).toHaveBeenCalledWith({ onAuthFailure: 'clear-only' });
       expect(component.step).toBe('email');
-      // Pre-fix: it uses hardcoded English string. We expect i18n key 'auth.errors.session-expired-request-code'
-      // so this test will fail as expected in Task 1 (it failed with the old string).
       expect(component.errorMessage).toBe('auth.errors.session-expired-request-code');
+      expect(localStorage.getItem('wallet_refresh_token')).toBeNull();
       expect(sessionStorage.getItem(PENDING_DEEP_LINK_KEY)).toContain('credential_offer_uri');
       expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
     });
 
-    it('AC-02: resumes deep link after successful OTP verification and passkey registration', async () => {
-      sessionStorage.setItem(
-        PENDING_DEEP_LINK_KEY,
-        '/protocol/callback?credential_offer_uri=https://offer-url'
+    it('AC-02: follows full flow (expiry -> email step -> OTP -> resume) and completes deep link', async () => {
+      // 1. Start with an expired session
+      mockAuthService.refreshAccessToken.mockReturnValue(
+        throwError(() => ({ status: 401, error: { detail: 'invalid_grant' } }))
       );
+
+      component.ionViewWillEnter();
+      await component.verifyPasskey();
+
+      expect(component.step).toBe('email');
+      expect(component.errorMessage).toBe('auth.errors.session-expired-request-code');
+      expect(sessionStorage.getItem(PENDING_DEEP_LINK_KEY)).toBeTruthy();
+
+      // 2. User re-authenticates via OTP
       component.email = 'user@example.com';
       component.otpValue = '123456';
       mockAuthService.verifyEmail.mockReturnValue(of({ accessToken: 'a', refreshToken: 'r', expiresIn: 900 }));
@@ -448,12 +458,35 @@ describe('LoginPage (server mode)', () => {
       expect(component.step).toBe('passkey');
       expect(component.needsPasskeySetup).toBe(true);
 
-      // Now complete passkey registration
+      // 3. Complete passkey registration
       mockPasskeyApi.registerPasskey.mockReturnValue(of({ id: 'p1' }));
       await component.createPasskeyForDevice();
 
-      expect(mockRouter.navigateByUrl).toHaveBeenCalledWith(expect.stringContaining('credential_offer_uri=https://offer-url'));
+      // 4. Verification: resumes the offer and clears the pending key
+      expect(mockRouter.navigateByUrl).toHaveBeenCalledWith(expect.stringContaining('credential_offer_uri=https://sandbox.stg.eudistack.net/issuer/oid4vci/v1/credential-offer/abc'));
       expect(sessionStorage.getItem(PENDING_DEEP_LINK_KEY)).toBeNull();
+    });
+
+    it('stays on passkey step if WebAuthn is cancelled, without clearing the token', async () => {
+      // Simulate manual cancellation of the biometrics prompt
+      Object.defineProperty(navigator, 'credentials', {
+        configurable: true,
+        value: {
+          get: jest.fn().mockResolvedValue(null),
+        },
+      });
+
+      localStorage.setItem('wallet_refresh_token', 'stale-refresh');
+      component.ionViewWillEnter();
+      expect(component.step).toBe('passkey');
+
+      await component.verifyPasskey();
+
+      // Result: user stays on passkey screen and token is still there
+      expect(component.step).toBe('passkey');
+      expect(component.errorMessage).toBe('Authentication cancelled');
+      expect(localStorage.getItem('wallet_refresh_token')).toBe('stale-refresh');
+      expect(mockAuthService.refreshAccessToken).not.toHaveBeenCalled();
     });
   });
 });
