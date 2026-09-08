@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { NEVER, Observable, of, throwError } from 'rxjs';
 import { LoginPage } from './login.page';
 import { AuthService } from 'src/app/core/services/auth.service';
@@ -707,6 +707,92 @@ describe('LoginPage (server mode)', () => {
 
       expect(component.step()).toBe('code');
       expect(component.loading).toBe(false);
+    });
+
+    it('covers resendCode error branch', () => {
+      const registerSpy = mockAuthService.register.mockReturnValue(throwError(() => ({ status: 500, error: { detail: 'resend_failed_detail' } })));
+      component.email = 'user@example.com';
+      component.resendSecondsLeft.set(0);
+
+      component.resendCode();
+
+      expect(registerSpy).toHaveBeenCalled();
+      expect(component.errorMessage).toBe('resend_failed_detail');
+      expect(component.loading).toBe(false);
+    });
+
+    it('covers resendCode 429 error branch', () => {
+      mockAuthService.register.mockReturnValue(throwError(() => ({ status: 429 })));
+      component.email = 'user@example.com';
+      component.resendSecondsLeft.set(0);
+
+      component.resendCode();
+
+      expect(component.errorMessage).toBe('auth.errors.too-many-attempts');
+    });
+
+    it('covers sendCode 429 and error detail branches', () => {
+      mockAuthService.register.mockReturnValue(throwError(() => ({ status: 429 })));
+      component.email = 'user@example.com';
+      component.sendCode();
+      expect(component.errorMessage).toBe('auth.errors.too-many-attempts');
+
+      mockAuthService.register.mockReturnValue(throwError(() => ({ status: 500, error: { detail: 'send_failed_detail' } })));
+      component.sendCode();
+      expect(component.errorMessage).toBe('send_failed_detail');
+    });
+
+    it('covers verifyCode 429 and error detail branches', () => {
+      mockAuthService.verifyEmail.mockReturnValue(throwError(() => ({ status: 429 })));
+      component.email = 'user@example.com';
+      component.otpValue = '123456';
+      component.verifyCode();
+      expect(component.errorMessage).toBe('auth.errors.too-many-attempts-otp');
+
+      mockAuthService.verifyEmail.mockReturnValue(throwError(() => ({ status: 500, error: { detail: 'verify_failed_detail' } })));
+      component.verifyCode();
+      expect(component.errorMessage).toBe('verify_failed_detail');
+    });
+
+    it('covers error handling in verifyPasskey, createPasskeyForDevice and syncCredentialsThenNavigate', async () => {
+      const translate = TestBed.inject(TranslateService);
+      const translateSpy = jest.spyOn(translate, 'instant');
+
+      // 1. authenticateLocally error (verifyPasskey branch)
+      jest.spyOn(component as any, 'authenticateLocally').mockRejectedValueOnce({});
+      await component.verifyPasskey();
+      expect(component.errorMessage).toBe('Passkey verification failed');
+
+      // 2. createPasskey error branch (createPasskeyForDevice)
+      mockPrfService.createPasskey.mockRejectedValueOnce({});
+      await component.createPasskeyForDevice();
+      expect(component.errorMessage).toBe('Failed to create passkey');
+
+      // 3. registerPasskey error branch (createPasskeyForDevice fallback name)
+      mockPrfService.createPasskey.mockResolvedValueOnce('ok');
+      mockPasskeyStore.getCredentialId.mockReturnValueOnce('cred-1');
+      mockPasskeyApi.registerPasskey.mockReturnValueOnce(throwError(() => ({})));
+      component.deviceName = '';
+      await component.createPasskeyForDevice();
+      // It should use getDeviceName() as fallback and eventually fail with i18n key
+      expect(translateSpy).toHaveBeenCalledWith('auth.errors.passkey-register-failed');
+    });
+  });
+
+  describe('Help modal and view events', () => {
+    it('covers openHelp and closeHelp', () => {
+      component.openHelp();
+      expect(component.showHelpModal).toBe(true);
+      component.closeHelp();
+      expect(component.showHelpModal).toBe(false);
+    });
+
+    it('covers ionViewWillLeave and ngOnDestroy', () => {
+      const stopSpy = jest.spyOn(component as any, 'stopResendCountdown');
+      component.ionViewWillLeave();
+      expect(stopSpy).toHaveBeenCalled();
+      component.ngOnDestroy();
+      expect(stopSpy).toHaveBeenCalledTimes(2);
     });
   });
 
