@@ -65,9 +65,9 @@ describe('UrlResolverService', () => {
         (environment as any).websocket_url = undefined;
         const originalLocation = window.location;
         delete (window as any).location;
-        (window as any).location = { origin: 'https://wallet.example.com' };
+        (window as any).location = { origin: 'https://wallet.example-domain.com' };
 
-        expect(service.websocketUrl()).toBe('wss://wallet.example.com/business-wallet');
+        expect(service.websocketUrl()).toBe('wss://wallet.example-domain.com/business-wallet');
 
         (window as any).location = originalLocation;
       });
