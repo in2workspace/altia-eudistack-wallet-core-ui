@@ -121,6 +121,12 @@
       "passkey-button": "Iniciar sessió amb Passkey",
       "enter-email": "Introdueix el teu email per començar",
       "verify-passkey": "Verifica la teva identitat amb la teva passkey",
+      "initializing": "Preparant el teu wallet…",
+      "initializing-slow": "Això està trigant més del que és habitual…",
+      "init-error-title": "No hem pogut carregar el teu wallet",
+      "init-error-subtitle": "S'ha produït un problema en preparar l'aplicació. Pots reintentar-ho o recarregar la pàgina.",
+      "retry": "Reintenta-ho",
+      "reload-app": "Recarrega l'aplicació",
       "email-title": "Continua amb el teu email",
       "email-subtitle": "Introdueix l'adreça de correu associada al teu compte de {{brand}}."
     },

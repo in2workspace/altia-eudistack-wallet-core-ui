@@ -134,6 +134,12 @@
       "passkey-button": "Sign in with Passkey",
       "enter-email": "Enter your email to get started",
       "verify-passkey": "Use your passkey to access your account securely.",
+      "initializing": "Setting up your wallet…",
+      "initializing-slow": "This is taking longer than expected…",
+      "init-error-title": "We couldn't load your wallet",
+      "init-error-subtitle": "Something went wrong while preparing the app. You can try again or reload the page.",
+      "retry": "Try again",
+      "reload-app": "Reload the app",
       "email-title": "Continue with your email",
       "email-subtitle": "Enter the email address associated with your {{brand}} account."
     },

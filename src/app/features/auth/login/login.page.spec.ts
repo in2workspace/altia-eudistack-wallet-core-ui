@@ -1,7 +1,7 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { NEVER, Observable, of, throwError } from 'rxjs';
+import { NEVER, Observable, of, Subject, throwError } from 'rxjs';
 import { LoginPage } from './login.page';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { PasskeyPrfService } from 'src/app/core/services/passkey-prf.service';
@@ -794,6 +794,138 @@ describe('LoginPage (server mode)', () => {
       component.ngOnDestroy();
       expect(stopSpy).toHaveBeenCalledTimes(2);
     });
+  });
+
+  describe('Initialization watchdog (structured loader / friendly timeout on stuck installDecision$)', () => {
+    let pendingInstallDecision$: Subject<boolean>;
+
+    beforeEach(async () => {
+      pendingInstallDecision$ = new Subject<boolean>();
+      TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [LoginPage, TranslateModule.forRoot()],
+        providers: baseProviders.map(provider => provider.provide === PwaInstallService
+          ? {
+              provide: PwaInstallService,
+              // never emits on its own — the watchdog tests drive it manually via .next()
+              useValue: { installDecision$: pendingInstallDecision$, isStandalone: false, promptInstall: jest.fn() },
+            }
+          : provider),
+      }).compileComponents();
+
+      fixture = TestBed.createComponent(LoginPage);
+      component = fixture.componentInstance;
+    });
+
+    it('starts with neither the slow message nor the error screen showing', () => {
+      component.ionViewWillEnter();
+
+      expect(component.initTakingLong()).toBe(false);
+      expect(component.initFailed()).toBe(false);
+    });
+
+    it('shows the "taking longer" message once the slow threshold elapses without resolving', fakeAsync(() => {
+      component.ionViewWillEnter();
+
+      tick(2999);
+      expect(component.initTakingLong()).toBe(false);
+
+      tick(1);
+      expect(component.initTakingLong()).toBe(true);
+      expect(component.initFailed()).toBe(false);
+
+      pendingInstallDecision$.next(false);
+      tick(0);
+    }));
+
+    it('shows the friendly error screen once the fail threshold elapses without installDecision$ ever resolving', fakeAsync(() => {
+      component.ionViewWillEnter();
+
+      tick(7999);
+      expect(component.initFailed()).toBe(false);
+
+      tick(1);
+      expect(component.initFailed()).toBe(true);
+
+      pendingInstallDecision$.next(false);
+      tick(0);
+    }));
+
+    it('never shows the error screen when installDecision$ resolves before the fail threshold', fakeAsync(() => {
+      component.ionViewWillEnter();
+
+      tick(3500);
+      pendingInstallDecision$.next(false);
+      tick(8000);
+
+      expect(component.initFailed()).toBe(false);
+    }));
+
+    it('retryInit() clears the error screen and re-arms the watchdog', fakeAsync(() => {
+      component.ionViewWillEnter();
+      tick(8000);
+      expect(component.initFailed()).toBe(true);
+
+      component.retryInit();
+
+      expect(component.initFailed()).toBe(false);
+      expect(component.initTakingLong()).toBe(false);
+
+      pendingInstallDecision$.next(false);
+      tick(0);
+    }));
+
+    it('retryInit() actually leaves the "checking" screen when installDecision$ never settles (W1: re-arming alone cannot recover, since installDecision$ is a shareReplay a fresh subscription cannot restart)', fakeAsync(() => {
+      component.ionViewWillEnter();
+      tick(8000);
+      expect(component.initFailed()).toBe(true);
+      expect(component.screen()).toBe('checking');
+
+      component.retryInit();
+
+      // Proceeds as if installDecision$ had resolved to false, without a page reload.
+      expect(component.screen()).not.toBe('checking');
+      expect(component.screen()).toBe('email');
+
+      pendingInstallDecision$.next(false);
+      tick(0);
+    }));
+
+    it('reloadApp() reloads the page as the guaranteed manual fallback', () => {
+      const originalLocation = window.location;
+      const reloadSpy = jest.fn();
+      // jsdom's window.location.reload is read-only — swap the whole object for the spy.
+      delete (window as unknown as { location?: Location }).location;
+      (window as unknown as { location: Location }).location = { ...originalLocation, reload: reloadSpy } as Location;
+
+      component.reloadApp();
+
+      expect(reloadSpy).toHaveBeenCalled();
+
+      (window as unknown as { location: Location }).location = originalLocation;
+    });
+
+    it('stops the watchdog timers on ionViewWillLeave so a stale timeout cannot flip the signals after leaving (W2)', fakeAsync(() => {
+      component.ionViewWillEnter();
+      tick(1000);
+
+      component.ionViewWillLeave();
+      tick(8000);
+
+      expect(component.initTakingLong()).toBe(false);
+      expect(component.initFailed()).toBe(false);
+    }));
+
+    it('stops the watchdog timers on ngOnDestroy (W2)', fakeAsync(() => {
+      component.ionViewWillEnter();
+      tick(1000);
+
+      component.ngOnDestroy();
+      tick(8000);
+
+      expect(component.initTakingLong()).toBe(false);
+      expect(component.initFailed()).toBe(false);
+    }));
   });
 
   describe('verification-code resend cooldown', () => {
