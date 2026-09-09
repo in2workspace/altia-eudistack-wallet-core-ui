@@ -78,7 +78,25 @@
 
 .auth-checking {
   display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
+  gap: 12px;
+}
+
+.init-status {
+  @include fluid-type(0.8125rem, 0.9rem);
+  color: var(--text-secondary);
+  text-align: center;
+  margin: 0;
+}
+
+// Init failure screen
+.init-error {
+  .init-error-icon {
+    font-size: 40px;
+    color: var(--text-secondary);
+  }
 }
 
 .auth-back {
