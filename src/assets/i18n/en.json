@@ -7,18 +7,30 @@
     "terms-of-user": "Terms of Use",
     "privacy-policy": "Privacy Policy",
     "faqs": "FAQs",
+    "signed-in-as": "Signed in as",
+    "activity": "Activity",
+    "connected-devices": "Connected Devices",
     "settings": "Settings",
+    "about": "About",
     "logout": "Logout",
     "install": "Install App",
     "wallet": "Wallet"
   },
   "scanner": {
-    "initializing": "Initializing scanner... Please wait.",
-    "manualInput": "Or paste QR content manually:",
-    "manualInputPlaceholder": "Paste QR code content here...",
-    "send": "Send"
+    "title": "Scan your QR code",
+    "subtitle": "Use your device camera to scan the QR code",
+    "manual-hint": "Can't scan the QR code?",
+    "manual-link": "Enter code manually",
+    "manual-title": "Enter code manually",
+    "manual-description": "If you're unable to scan the QR code, enter the activation code provided to you.",
+    "manual-label": "Access code",
+    "manual-placeholder": "Enter the access code",
+    "manual-back": "Back to Scan your QR code",
+    "manual-continue": "Continue",
+    "initializing": "Initializing scanner... Please wait."
   },
   "camera-selector": {
+    "device-label": "Camera",
     "title": "Selected camera",
     "settings": "Camera settings",
     "no-device": "No device",
@@ -35,7 +47,16 @@
     "add": "Add",
     "nocred": "You have no saved credentials.\nAdd one to start using the Wallet.",
     "nocred-title": "No credentials yet",
-    "nocred-subtitle": "Scan a QR code or accept a credential offer to get started.",
+    "nocred-subtitle": "Your verified credentials will appear here once they are added to your wallet.",
+    "nocred-scan": "Scan QR code",
+    "show-data": "Show data",
+    "hide-data": "Hide data",
+    "how-it-works": {
+      "title": "How does it work?",
+      "step-scan": "Scan a QR code",
+      "step-add": "Add new credential",
+      "step-manage": "Manage it here"
+    },
     "expiration": "Expired",
     "expiring-soon": "Expiring soon",
     "expiredCredential": "Credential expired",
@@ -67,7 +88,9 @@
     "retry": "Retry"
   },
   "language-selector": {
-    "title": "Select language"
+    "title": "Language",
+    "subtitle": "Choose your preferred language for the wallet interface.",
+    "back-to-wallet": "Back to wallet"
   },
   "logs-selector": {
     "title": "View logs",
@@ -83,6 +106,26 @@
   },
   "mailto_permission_alert": "Please make sure you have the necessary permissions to send emails with your default email application. If the email service doesn't open, it is likely due to permission restrictions.",
   "auth": {
+    "access": {
+      "title": "Access {{brand}} securely",
+      "install-hint": "For the best experience and offline access, install the wallet app on your device.",
+      "open-hint": "If you already have the {{brand}} Wallet, open it to continue. If not, install it to get started.",
+      "continue-wallet": "Continue with {{brand}} Wallet",
+      "already-title": "Already have a {{brand}} Wallet?",
+      "already-text": "If your wallet is already configured in other device, your existing credentials will be recovered.",
+      "help-link": "Need help? Learn more",
+      "help": {
+        "title": "Need help?",
+        "intro": "If you're unable to scan the QR code, enter the activation code provided to you.",
+        "q1": "I already have a {{brand}} Wallet. Do I need to create a new account?",
+        "a1": "No. During setup, your existing credentials will be recovered.",
+        "q2": "What if I'm using a new device?",
+        "a2": "You'll be guided through the steps required to securely access your existing {{brand}} account.",
+        "q3": "Can I continue without installing the Wallet?",
+        "a3": "Yes. You can continue in your browser, although some features may be limited.",
+        "close": "Close"
+      }
+    },
     "login": {
       "title": "Register your device",
       "title-welcome": "Welcome back",
@@ -90,13 +133,15 @@
       "create-passkey-subtitle": "Your passkey keeps your wallet secure. You'll use it to sign in.",
       "passkey-button": "Sign in with Passkey",
       "enter-email": "Enter your email to get started",
-      "verify-passkey": "Verify your identity with your passkey",
+      "verify-passkey": "Use your passkey to access your account securely.",
       "initializing": "Setting up your wallet…",
       "initializing-slow": "This is taking longer than expected…",
       "init-error-title": "We couldn't load your wallet",
       "init-error-subtitle": "Something went wrong while preparing the app. You can try again or reload the page.",
       "retry": "Try again",
-      "reload-app": "Reload the app"
+      "reload-app": "Reload the app",
+      "email-title": "Continue with your email",
+      "email-subtitle": "Enter the email address associated with your {{brand}} account."
     },
     "register": {
       "email-placeholder": "Enter your email",
@@ -107,7 +152,17 @@
       "install-title": "Install the App",
       "install-subtitle": "For the best experience and offline access, install the wallet app on your device.",
       "install-button": "Install App",
-      "continue-browser": "Continue in browser"
+      "continue-browser": "Continue in browser",
+      "email-label": "Email",
+      "verify-title": "Verify your email address",
+      "code-sent-prefix": "Enter the verification code sent to your email address",
+      "code-validity": "The code is valid for a limited time.",
+      "code-label": "Code",
+      "resend-in": "Didn't receive the code? Resend available in {{time}}",
+      "resend-prompt": "Didn't receive the code?",
+      "resend-action": "Resend it",
+      "continue": "Continue",
+      "back": "Back"
     },
     "passkey": {
       "title": "Set up Passkey",
@@ -119,7 +174,11 @@
       "success": "Passkey registered successfully!",
       "status-connecting": "Preparing...",
       "status-verifying": "Waiting for your device...",
-      "retry": "Try again"
+      "retry": "Try again",
+      "verified-title": "Email verified!",
+      "setup-title": "Set up a passkey",
+      "verified-subtitle": "Your email has been successfully verified.",
+      "setup-subtitle": "Set up a passkey to complete access on this device."
     },
     "reauth": {
       "subtitle": "Verify your email to restore your session",
@@ -141,6 +200,7 @@
     "error": "Username or password incorrect"
   },
   "settings": {
+    "theme": "Theme",
     "title": "Settings",
     "privacy-blur": "Privacy blur",
     "privacy-blur-desc": "Blur credential details",
@@ -154,7 +214,10 @@
     "wallet-mode-business": "Business Wallet"
   },
   "about": {
-    "section-info": "Application information",
+    "subtitle": "Learn more about the wallet, access support resources, and review legal information.",
+    "back-to-wallet": "Back to wallet",
+    "section-provider": "Wallet provider",
+    "section-info": "App information",
     "section-legal": "Legal",
     "section-support": "Support",
     "build": "Build",
@@ -167,7 +230,7 @@
     },
     "support": {
       "help-center": "Help center",
-      "email": "Contact by email",
+      "email": "Contact support",
       "email-copy": "Copy address",
       "email-copied": "Address copied",
       "report-issue": "Report an issue",
@@ -228,10 +291,21 @@
     "unsigned-header": "Unsigned Credential",
     "unsigned-message": "Your credential has not yet been signed and cannot be used. Wait for the issuer to complete the signing process.",
     "revoked": "Revoked",
-    "delete-success": "Credential deleted successfully"
+    "delete-success": "Credential deleted successfully",
+    "badge-verified": "Credential verified",
+    "badge-expired": "Credential expired",
+    "badge-revoked": "Credential revoked",
+    "preview-name": "Name",
+    "preview-issuer": "Issuer ID",
+    "preview-status": "Status",
+    "preview-expiry": "Expiry",
+    "lifecycle-valid": "Valid",
+    "lifecycle-issued": "Unsigned",
+    "lifecycle-revoked": "Revoked",
+    "lifecycle-expired": "Expired"
   },
   "vc-fields": {
-    "delete": "Delete",
+    "delete": "Delete credential",
     "copy-success": "Copied to clipboard",
     "modal-title": "Credential Details",
     "title": "Credential Info",
@@ -316,7 +390,8 @@
       "delete": "Delete",
       "attest": "Attest",
       "upload": "Upload"
-    }
+    },
+    "issued-by": "Issued by"
   },
   "errors": {
     "default": "Something went wrong. If it keeps happening, please contact the <a href='https://ticketing.dome-marketplace.eu/' target='_blank' rel='noopener noreferrer'>support team</a>.",
@@ -389,22 +464,24 @@
   },
   "activity": {
     "title": "Activity",
-    "filter-all": "All",
+    "back-to-wallet": "Back to wallet",
+    "filter-all": "All activity",
     "filter-issued": "Received",
     "filter-presented": "Presented",
     "filter-deleted": "Deleted",
     "empty": "No activity yet",
-    "empty-hint": "Your credential activity will appear here",
+    "empty-hint": "Your recent wallet actions will appear here.",
+    "empty-cta": "Add credential",
     "empty-issued": "No credentials received",
     "empty-presented": "No credentials presented",
     "empty-deleted": "No credentials deleted",
-    "clear": "Clear",
+    "clear": "Clear history",
     "clear-confirm": "Clear all activity?",
     "clear-title": "Delete your activity history?",
     "clear-description": "This will permanently remove all activity records from your wallet. This action cannot be undone.",
     "clear-cancel": "Cancel",
-    "clear-action": "Yes, clear",
-    "export": "Export history",
+    "clear-action": "Clear history",
+    "export": "Export activity history",
     "csv-header-type": "Type",
     "csv-header-credential": "Credential",
     "csv-header-counterparty": "Counterparty",
@@ -417,7 +494,9 @@
     "type-unknown": "Activity",
     "subtitle-issued": "Received from {{counterparty}}",
     "subtitle-presented": "Presented to {{counterparty}}",
+    "subtitle-deleted": "Issued by {{counterparty}}",
     "time-now": "Just now",
+    "date-today": "Today",
     "time-minutes": "{{count}}m ago",
     "time-hours": "{{count}}h ago",
     "time-days": "{{count}}d ago",
@@ -433,9 +512,20 @@
     "detail-shared-attributes-empty": "No shared attributes were recorded for this presentation."
   },
   "devices": {
+    "back-to-wallet": "Back to wallet",
+    "section-current": "Current device",
+    "section-others": "Other connected devices",
+    "last-active": "Last active",
+    "added-on": "Added on",
+    "remove-device": "Remove device",
+    "close-sessions": "Close sessions",
+    "no-other-devices-title": "No other devices connected",
+    "no-other-devices-hint": "Your wallet is currently available only on this device.",
+    "no-current-device-title": "This device is not registered",
+    "no-current-device-hint": "We could not match this browser with any registered device. Sign in again from here to register it.",
     "settings-link": "My Devices",
-    "title": "My Devices",
-    "subtitle": "Manage the passkeys registered to your account",
+    "title": "Connected devices",
+    "subtitle": "Manage the devices linked to your wallet and revoke access when needed.",
     "rename-header": "Rename Passkey",
     "rename-placeholder": "Enter new name",
     "rename-confirm": "Rename",
@@ -457,7 +547,7 @@
     "this-device": "This device"
   },
   "verification": {
-    "button": "Verify Credential",
+    "button": "Check credential status",
     "modal-title": "Credential Verification",
     "verifying": "Verifying credential...",
     "result-valid": "Credential is valid",
@@ -472,14 +562,22 @@
     "detail-revoked": "Revoked",
     "detail-no-status-list": "No status list",
     "detail-no-expiry": "No expiry",
-    "detail-check-error": "Could not be verified"
+    "detail-check-error": "Could not be verified",
+    "card-title": "Credential Verification",
+    "row-issuance": "Issuance date",
+    "row-expiration": "Expiration date",
+    "row-issuer": "Issuer",
+    "row-revocation": "Revocation status"
   },
   "confirmation": {
+    "decline": "Decline",
+    "accept-credential": "Accept credential",
+    "review-within": "Review and confirm within {{time}}",
     "header": "Send credential?",
     "ok": "Ok",
     "cancel": "Cancel",
     "new-credential": "Do you want to accept this credential?",
-    "new-credential-title": "New Credential",
+    "new-credential-title": "Verify the details of your new credential",
     "accept": "Accept",
     "pin": "Enter PIN",
     "description": "A PIN has been sent to your email. Check your inbox. Enter your PIN Code.",
@@ -502,7 +600,7 @@
     "hint-standalone": "Return to the other EUDI Wallet window.",
     "hint-tab": "Use Ctrl+Tab to return to the active tab.",
     "close-fallback-standalone": "Close this window manually",
-    "close-fallback-tab": "Close this tab with Ctrl+W (\u2318+W on Mac)",
+    "close-fallback-tab": "Close this tab with Ctrl+W (⌘+W on Mac)",
     "close-button": "Close this {{type}}"
   },
   "tenantNotFound": {
