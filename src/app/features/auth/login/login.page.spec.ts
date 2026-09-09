@@ -504,6 +504,22 @@ describe('LoginPage (server mode)', () => {
       tick(0);
     }));
 
+    it('retryInit() actually leaves the "checking" screen when installDecision$ never settles (W1: re-arming alone cannot recover, since installDecision$ is a shareReplay a fresh subscription cannot restart)', fakeAsync(() => {
+      component.ionViewWillEnter();
+      tick(8000);
+      expect(component.initFailed()).toBe(true);
+      expect(component.screen()).toBe('checking');
+
+      component.retryInit();
+
+      // Proceeds as if installDecision$ had resolved to false, without a page reload.
+      expect(component.screen()).not.toBe('checking');
+      expect(component.screen()).toBe('email');
+
+      pendingInstallDecision$.next(false);
+      tick(0);
+    }));
+
     it('reloadApp() reloads the page as the guaranteed manual fallback', () => {
       const originalLocation = window.location;
       const reloadSpy = jest.fn();
@@ -517,6 +533,28 @@ describe('LoginPage (server mode)', () => {
 
       (window as unknown as { location: Location }).location = originalLocation;
     });
+
+    it('stops the watchdog timers on ionViewWillLeave so a stale timeout cannot flip the signals after leaving (W2)', fakeAsync(() => {
+      component.ionViewWillEnter();
+      tick(1000);
+
+      component.ionViewWillLeave();
+      tick(8000);
+
+      expect(component.initTakingLong()).toBe(false);
+      expect(component.initFailed()).toBe(false);
+    }));
+
+    it('stops the watchdog timers on ngOnDestroy (W2)', fakeAsync(() => {
+      component.ionViewWillEnter();
+      tick(1000);
+
+      component.ngOnDestroy();
+      tick(8000);
+
+      expect(component.initTakingLong()).toBe(false);
+      expect(component.initFailed()).toBe(false);
+    }));
   });
 
   describe('verification-code resend cooldown', () => {

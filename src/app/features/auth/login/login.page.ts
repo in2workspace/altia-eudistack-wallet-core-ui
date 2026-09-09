@@ -68,6 +68,11 @@ export class LoginPage implements OnDestroy {
 
   readonly initTakingLong = signal(false);
   readonly initFailed = signal(false);
+  // Set by retryInit() when installDecision$ never settled even past the fail
+  // threshold: installDecision$ is a shareReplay({ refCount: false }), so a
+  // fresh subscription cannot "restart" it — the only way out without a full
+  // reload is to stop waiting on it and treat the decision as resolved (false).
+  private readonly forceReady = signal(false);
   private slowInitTimer: ReturnType<typeof setTimeout> | null = null;
   private failInitTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -101,7 +106,7 @@ export class LoginPage implements OnDestroy {
   });
 
   readonly screen = computed<'checking' | 'access' | 'browser' | 'email' | 'code' | 'passkey'>(() => {
-    const decision = this.installDecision();
+    const decision = this.forceReady() ? false : this.installDecision();
     if (decision === undefined) return 'checking';
     if (decision && this.showInstallScreen()) return 'access';
     if (this.isBrowserMode) return 'browser';
@@ -150,6 +155,7 @@ export class LoginPage implements OnDestroy {
   ionViewWillEnter(): void {
     this.loading = false;
     this.errorMessage = '';
+    this.forceReady.set(false);
     this.startInitWatchdog();
 
     if (!this.isBrowserMode && localStorage.getItem('wallet_refresh_token')) {
@@ -168,10 +174,12 @@ export class LoginPage implements OnDestroy {
 
   ionViewWillLeave(): void {
     this.stopResendCountdown();
+    this.clearInitWatchdog();
   }
 
   ngOnDestroy(): void {
     this.stopResendCountdown();
+    this.clearInitWatchdog();
   }
 
   async installApp(): Promise<void> {
@@ -196,8 +204,9 @@ export class LoginPage implements OnDestroy {
   /**
    * Guards against installDecision$ (or any future init dependency) never
    * settling: escalates the spinner to a "taking longer" message and, past
-   * INIT_FAIL_THRESHOLD_MS, to a friendly error screen with a way out that
-   * doesn't require a manual browser refresh.
+   * INIT_FAIL_THRESHOLD_MS, to a friendly error screen. retryInit() from that
+   * screen forces past the stuck probe (see forceReady) rather than merely
+   * re-arming these timers, so it recovers without a manual browser refresh.
    */
   private startInitWatchdog(): void {
     this.clearInitWatchdog();
@@ -221,6 +230,13 @@ export class LoginPage implements OnDestroy {
   }
 
   retryInit(): void {
+    // installDecision$ is shareReplay({ refCount: false }): resubscribing does not
+    // restart its race, so simply re-arming the watchdog can't recover a stuck probe.
+    // Once we've actually shown the failure screen, stop waiting on it and proceed
+    // as if it had resolved to false (no install screen, straight to login).
+    if (this.initFailed()) {
+      this.forceReady.set(true);
+    }
     this.startInitWatchdog();
   }
 
