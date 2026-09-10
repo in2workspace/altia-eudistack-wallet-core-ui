@@ -7,6 +7,7 @@ const DB_VERSION = 1;
 
 const KEY_CREDENTIAL_ID = 'credential_id';
 const KEY_HAS_PASSKEY = 'has_passkey';
+const KEY_WEBAUTHN_USER_ID = 'webauthn_user_id';
 
 /**
  * Persists passkey metadata (credential ID and presence flag) in IndexedDB.
@@ -31,6 +32,16 @@ export class PasskeyStoreService {
     return (this.cache.get(KEY_CREDENTIAL_ID) as string) ?? null;
   }
 
+  /**
+   * Stable WebAuthn `user.id` handle for this browser profile. Kept separate from
+   * `credential_id`/`has_passkey` and untouched by `clear()`/`clearCredentialId()`
+   * so a retry after a failed passkey registration reuses the same handle instead
+   * of asking the authenticator to create another resident credential.
+   */
+  getWebAuthnUserId(): string | null {
+    return (this.cache.get(KEY_WEBAUTHN_USER_ID) as string) ?? null;
+  }
+
   // --- Async writes (persist to IndexedDB + update cache) ---
 
   async setCredentialId(credentialId: string): Promise<void> {
@@ -47,13 +58,26 @@ export class PasskeyStoreService {
     await this.put({ key: KEY_HAS_PASSKEY, value });
   }
 
+  async setWebAuthnUserId(id: string): Promise<void> {
+    this.cache.set(KEY_WEBAUTHN_USER_ID, id);
+    await this.put({ key: KEY_WEBAUTHN_USER_ID, value: id });
+  }
+
+  /**
+   * Clears credential_id/has_passkey only — deliberately leaves webauthn_user_id
+   * in place, on disk and in cache, so a later passkey registration on this
+   * device (self-revoke re-onboarding, or a retry after a failed registration
+   * via `clearCredentialId()`) reuses the same WebAuthn user handle.
+   */
   async clear(): Promise<void> {
     this.cache.delete(KEY_CREDENTIAL_ID);
     this.cache.delete(KEY_HAS_PASSKEY);
     const db = await this.openDatabase();
     try {
       const tx = db.transaction(STORE_NAME, 'readwrite');
-      tx.objectStore(STORE_NAME).clear();
+      const store = tx.objectStore(STORE_NAME);
+      store.delete(KEY_CREDENTIAL_ID);
+      store.delete(KEY_HAS_PASSKEY);
       await this.awaitTx(tx);
     } finally {
       db.close();

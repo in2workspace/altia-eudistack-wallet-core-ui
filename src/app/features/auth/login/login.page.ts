@@ -66,6 +66,7 @@ export class LoginPage implements OnDestroy {
   readonly step = signal<'email' | 'code' | 'passkey'>('email');
   needsPasskeySetup = false;
   deviceName = '';
+  private matchedPasskeyId: string | null = null;
   readonly resendSecondsLeft = signal(0);
   private resendTimer: ReturnType<typeof setInterval> | null = null;
   private passkeyFromRefreshToken = false;
@@ -311,21 +312,29 @@ export class LoginPage implements OnDestroy {
    * (if any) must still be found among them, or `verifyPasskey()` will fail with
    * "No passkey found" / a WebAuthn assertion error with no way to register instead.
    */
-  private resolvePasskeySetupStep(): void {
+  private resolvePasskeySetupStep(retriedAfterError = false): void {
     const localCredentialId = this.prfService.getCredentialId();
 
     this.passkeyApi.listPasskeys().pipe(
       takeUntilDestroyed(this.destroyRef)
     ).subscribe({
       next: (passkeys) => {
-        this.needsPasskeySetup = !localCredentialId
-          || !passkeys.some(passkey => passkey.credentialId === localCredentialId);
+        const matched = passkeys.find(passkey => passkey.credentialId === localCredentialId);
+        this.matchedPasskeyId = matched?.id ?? null;
+        this.needsPasskeySetup = !localCredentialId || !matched;
         this.finishPasskeySetupStep();
       },
       error: (err) => {
-        // Fail-safe: if we can't confirm the account's server-side devices, assume
-        // it needs one rather than silently skipping registration.
-        console.warn('[LoginPage] listPasskeys failed, defaulting to needsPasskeySetup=true', err);
+        // A single network/5xx blip here used to force needsPasskeySetup=true
+        // immediately, which meant repeating device registration for a transient
+        // failure unrelated to whether the passkey is actually still registered.
+        // Retry once before falling back to the fail-safe.
+        if (!retriedAfterError) {
+          console.warn('[LoginPage] listPasskeys failed, retrying once', err);
+          setTimeout(() => this.resolvePasskeySetupStep(true), 1000);
+          return;
+        }
+        console.warn('[LoginPage] listPasskeys failed twice, defaulting to needsPasskeySetup=true', err);
         this.needsPasskeySetup = true;
         this.finishPasskeySetupStep();
       }
@@ -351,6 +360,7 @@ export class LoginPage implements OnDestroy {
         await firstValueFrom((this.authService as RemoteAuthService).refreshAccessToken());
       }
 
+      await this.confirmSessionIfMatched();
       await this.syncCredentialsThenNavigate();
     } catch (err: any) {
       if (this.passkeyFromRefreshToken) {
@@ -389,10 +399,18 @@ export class LoginPage implements OnDestroy {
       await firstValueFrom(this.passkeyApi.registerPasskey({
         credentialId,
         displayName: this.deviceName.trim() || this.getDeviceName(),
-        userAgent: navigator.userAgent
+        userAgent: navigator.userAgent,
+        refreshToken: localStorage.getItem('wallet_refresh_token')
       }));
       await this.syncCredentialsThenNavigate();
     } catch {
+      // The WebAuthn credential was created locally but the server never learned
+      // about it: roll back the local credential_id/has_passkey so the next
+      // attempt starts clean instead of the device permanently believing it has
+      // a passkey the account doesn't. The WebAuthn user handle (passkey-prf's
+      // createPasskey) is kept, so the retry replaces the same resident
+      // credential in the authenticator rather than creating another one.
+      await this.passkeyStore.clearCredentialId();
       this.errorMessage = this.translate.instant('auth.errors.passkey-register-failed');
     } finally {
       this.loading = false;
@@ -442,6 +460,24 @@ export class LoginPage implements OnDestroy {
 
     if (!assertion) {
       throw new Error('Authentication cancelled');
+    }
+  }
+
+  /**
+   * Attributes this session's refresh token to the passkey that just verified it
+   * (existing-device path), so the backend can later revoke/rotate this device's
+   * tokens without touching the account's other devices. Best-effort: linking
+   * must never block a login that already passed WebAuthn verification.
+   */
+  private async confirmSessionIfMatched(): Promise<void> {
+    if (!this.matchedPasskeyId) return;
+    const refreshToken = localStorage.getItem('wallet_refresh_token');
+    if (!refreshToken) return;
+
+    try {
+      await firstValueFrom(this.passkeyApi.confirmSession(this.matchedPasskeyId, refreshToken));
+    } catch (err) {
+      console.warn('[LoginPage] confirm-session failed, session stays unattributed', err);
     }
   }
 

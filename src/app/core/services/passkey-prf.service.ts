@@ -47,7 +47,13 @@ export class PasskeyPrfService {
    */
   async createPasskey(displayName: string): Promise<string> {
     const challenge = globalThis.crypto.getRandomValues(new Uint8Array(32));
-    const userId = globalThis.crypto.getRandomValues(new Uint8Array(16));
+
+    let userIdB64 = this.store.getWebAuthnUserId();
+    if (!userIdB64) {
+      userIdB64 = base64UrlEncode(globalThis.crypto.getRandomValues(new Uint8Array(16)));
+      await this.store.setWebAuthnUserId(userIdB64);
+    }
+    const userId = base64UrlDecode(userIdB64);
 
     const options: PublicKeyCredentialCreationOptions = {
       rp: { name: document.title || 'EUDI Wallet' },
