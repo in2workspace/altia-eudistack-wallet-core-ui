@@ -9,6 +9,7 @@ const ERROR_TRANSLATION_MAP: Record<string, string> = {
   'There are no credentials available to login': 'errors.no-credentials-available',
   'There was a problem processing the QR. It might be invalid or already have been used': 'errors.failed-qr-process',
   'Error while fetching credentialOffer from the issuer': 'errors.expired-credentialOffer',
+  'Credential offer not found': 'errors.expired-credentialOffer',
   'Error while deserializing CredentialOffer': 'errors.invalid-credentialOffer',
   'Error while processing Credential Issuer Metadata from the Issuer': 'errors.invalid-issuerMetadata',
   'Error while fetching  Credential from Issuer': 'errors.cannot-get-VC',

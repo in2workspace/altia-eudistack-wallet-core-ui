@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { IonicModule } from '@ionic/angular';
 import { Router } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, take } from 'rxjs';
 import { AuthService, RemoteAuthService } from 'src/app/core/services/auth.service';
 import { PasskeyPrfService } from 'src/app/core/services/passkey-prf.service';
 import { PasskeyStoreService } from 'src/app/core/services/passkey-store.service';
@@ -21,6 +21,12 @@ import { ActivityService } from 'src/app/core/services/activity.service';
 import { CredentialCacheService } from 'src/app/shared/services/credential-cache.service';
 
 const RESEND_COOLDOWN_SECONDS = 180;
+
+// Reassures the user that initialization is still progressing.
+const INIT_SLOW_THRESHOLD_MS = 3000;
+// Above PwaInstallService's own hard ceiling (INSTALL_DECISION_HARD_TIMEOUT_MS):
+// a safety net in case something other than installDecision$ hangs.
+const INIT_FAIL_THRESHOLD_MS = 8000;
 
 type WatermarkShape = 'access' | 'email' | 'verify' | 'passkey';
 
@@ -60,6 +66,16 @@ export class LoginPage implements OnDestroy {
     { question: 'auth.access.help.q3', answer: 'auth.access.help.a3' },
   ];
 
+  readonly initTakingLong = signal(false);
+  readonly initFailed = signal(false);
+  // Set by retryInit() when installDecision$ never settled even past the fail
+  // threshold: installDecision$ is a shareReplay({ refCount: false }), so a
+  // fresh subscription cannot "restart" it — the only way out without a full
+  // reload is to stop waiting on it and treat the decision as resolved (false).
+  private readonly forceReady = signal(false);
+  private slowInitTimer: ReturnType<typeof setTimeout> | null = null;
+  private failInitTimer: ReturnType<typeof setTimeout> | null = null;
+
   // Server mode: multi-step flow
   email = '';
   otpValue = '';
@@ -90,7 +106,7 @@ export class LoginPage implements OnDestroy {
   });
 
   readonly screen = computed<'checking' | 'access' | 'browser' | 'email' | 'code' | 'passkey'>(() => {
-    const decision = this.installDecision();
+    const decision = this.forceReady() ? false : this.installDecision();
     if (decision === undefined) return 'checking';
     if (decision && this.showInstallScreen()) return 'access';
     if (this.isBrowserMode) return 'browser';
@@ -139,6 +155,8 @@ export class LoginPage implements OnDestroy {
   ionViewWillEnter(): void {
     this.loading = false;
     this.errorMessage = '';
+    this.forceReady.set(false);
+    this.startInitWatchdog();
 
     if (!this.isBrowserMode && localStorage.getItem('wallet_refresh_token')) {
       this.step.set('passkey');
@@ -156,10 +174,12 @@ export class LoginPage implements OnDestroy {
 
   ionViewWillLeave(): void {
     this.stopResendCountdown();
+    this.clearInitWatchdog();
   }
 
   ngOnDestroy(): void {
     this.stopResendCountdown();
+    this.clearInitWatchdog();
   }
 
   async installApp(): Promise<void> {
@@ -177,6 +197,51 @@ export class LoginPage implements OnDestroy {
 
   closeHelp(): void {
     this.showHelpModal = false;
+  }
+
+  // --- Initialization watchdog ---
+
+  /**
+   * Guards against installDecision$ (or any future init dependency) never
+   * settling: escalates the spinner to a "taking longer" message and, past
+   * INIT_FAIL_THRESHOLD_MS, to a friendly error screen. retryInit() from that
+   * screen forces past the stuck probe (see forceReady) rather than merely
+   * re-arming these timers, so it recovers without a manual browser refresh.
+   */
+  private startInitWatchdog(): void {
+    this.clearInitWatchdog();
+    this.initTakingLong.set(false);
+    this.initFailed.set(false);
+
+    this.slowInitTimer = setTimeout(() => this.initTakingLong.set(true), INIT_SLOW_THRESHOLD_MS);
+    this.failInitTimer = setTimeout(() => this.initFailed.set(true), INIT_FAIL_THRESHOLD_MS);
+
+    this.pwaInstall.installDecision$.pipe(
+      take(1),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(() => this.clearInitWatchdog());
+  }
+
+  private clearInitWatchdog(): void {
+    if (this.slowInitTimer) clearTimeout(this.slowInitTimer);
+    if (this.failInitTimer) clearTimeout(this.failInitTimer);
+    this.slowInitTimer = null;
+    this.failInitTimer = null;
+  }
+
+  retryInit(): void {
+    // installDecision$ is shareReplay({ refCount: false }): resubscribing does not
+    // restart its race, so simply re-arming the watchdog can't recover a stuck probe.
+    // Once we've actually shown the failure screen, stop waiting on it and proceed
+    // as if it had resolved to false (no install screen, straight to login).
+    if (this.initFailed()) {
+      this.forceReady.set(true);
+    }
+    this.startInitWatchdog();
+  }
+
+  reloadApp(): void {
+    window.location.reload();
   }
 
   // --- Browser mode: single-step passkey login ---
@@ -344,23 +409,38 @@ export class LoginPage implements OnDestroy {
     this.loading = true;
     this.errorMessage = '';
 
+    // 1. Local authentication (Biometrics / WebAuthn)
     try {
       await this.authenticateLocally();
+    } catch (err: any) {
+      // WebAuthn error or cancellation: stay on 'passkey' step
+      // with the original browser/system error message.
+      this.errorMessage = err?.message || 'Passkey verification failed';
+      this.loading = false;
+      return;
+    }
 
+    // 2. Network operations (Refresh and Sync)
+    try {
       if (this.passkeyFromRefreshToken) {
-        await firstValueFrom((this.authService as RemoteAuthService).refreshAccessToken());
+        // If it fails with 'clear-only', RemoteAuthService clears localStorage automatically
+        await firstValueFrom(
+          (this.authService as RemoteAuthService).refreshAccessToken({ onAuthFailure: 'clear-only' })
+        );
       }
 
       await this.syncCredentialsThenNavigate();
     } catch (err: any) {
       if (this.passkeyFromRefreshToken) {
-        localStorage.removeItem('wallet_refresh_token');
+        // Token has expired: return to the start of the flow with recovery message
         this.passkeyFromRefreshToken = false;
         this.step.set('email');
-        this.errorMessage = 'Your session has expired. Please sign in again.';
+        this.errorMessage = this.translate.instant('auth.errors.session-expired-request-code');
+        // PENDING_DEEP_LINK_KEY stays intact to allow resumption after OTP
       } else {
         this.errorMessage = err?.message || 'Passkey verification failed';
       }
+    } finally {
       this.loading = false;
     }
   }

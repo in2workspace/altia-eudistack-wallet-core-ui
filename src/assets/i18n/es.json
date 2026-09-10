@@ -122,6 +122,12 @@
       "passkey-button": "Iniciar sesión con Passkey",
       "enter-email": "Introduce tu email para empezar",
       "verify-passkey": "Verifica tu identidad con tu passkey",
+      "initializing": "Preparando tu wallet…",
+      "initializing-slow": "Esto está tardando más de lo habitual…",
+      "init-error-title": "No se ha podido cargar tu wallet",
+      "init-error-subtitle": "Ha ocurrido un problema al preparar la aplicación. Puedes reintentar o recargar la página.",
+      "retry": "Reintentar",
+      "reload-app": "Recargar la aplicación",
       "email-title": "Continúa con tu email",
       "email-subtitle": "Introduce la dirección de email asociada a tu cuenta de {{brand}}."
     },
@@ -169,7 +175,8 @@
     "errors": {
       "too-many-attempts": "Demasiados intentos. Por favor, inténtalo más tarde.",
       "too-many-attempts-otp": "Demasiados intentos incorrectos. Por favor, solicita un nuevo código.",
-      "passkey-register-failed": "No se ha podido registrar este dispositivo. Inténtalo de nuevo."
+      "passkey-register-failed": "No se ha podido registrar este dispositivo. Inténtalo de nuevo.",
+      "session-expired-request-code": "Tu sesión ha caducado. Solicita un código de verificación para seguir abriendo la oferta de credencial."
     }
   },
   "otp-input": {

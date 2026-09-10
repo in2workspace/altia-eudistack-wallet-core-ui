@@ -21,9 +21,26 @@
 
           <!-- Installability probe still running -->
           @case ('checking') {
-            <div class="auth-checking">
-              <ion-spinner name="crescent"></ion-spinner>
-            </div>
+            @if (initFailed()) {
+              <div class="auth-checking init-error">
+                <ion-icon name="cloud-offline-outline" class="init-error-icon"></ion-icon>
+                <h2 class="auth-title">{{ 'auth.login.init-error-title' | translate }}</h2>
+                <p class="auth-subtitle">{{ 'auth.login.init-error-subtitle' | translate }}</p>
+
+                <button type="button" class="auth-button" (click)="retryInit()">
+                  {{ 'auth.login.retry' | translate }}
+                </button>
+
+                <button type="button" class="auth-link-button" (click)="reloadApp()">
+                  {{ 'auth.login.reload-app' | translate }}
+                </button>
+              </div>
+            } @else {
+              <div class="auth-checking">
+                <ion-spinner name="crescent"></ion-spinner>
+                <p class="init-status">{{ (initTakingLong() ? 'auth.login.initializing-slow' : 'auth.login.initializing') | translate }}</p>
+              </div>
+            }
           }
 
           <!-- Step 1: Access -->
