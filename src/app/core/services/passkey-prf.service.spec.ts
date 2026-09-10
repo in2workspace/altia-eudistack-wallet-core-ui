@@ -47,29 +47,49 @@ describe('PasskeyPrfService — createPasskey WebAuthn user handle', () => {
     });
   });
 
-  it('generates and persists a stable handle the first time', async () => {
-    await service.createPasskey('Alice');
+  it('generates and persists a stable handle keyed by the account the first time', async () => {
+    await service.createPasskey('Alice', 'alice@example.com');
 
+    expect(store.getWebAuthnUserId).toHaveBeenCalledWith('alice@example.com');
     expect(store.setWebAuthnUserId).toHaveBeenCalledTimes(1);
-    const persisted = store.setWebAuthnUserId.mock.calls[0][0];
+    const [accountKey, persisted] = store.setWebAuthnUserId.mock.calls[0];
+    expect(accountKey).toBe('alice@example.com');
     expect(typeof persisted).toBe('string');
     expect(persisted.length).toBeGreaterThan(0);
   });
 
-  it('reuses the stored handle instead of generating a new one', async () => {
+  it('defaults the account key to the display name when none is passed', async () => {
+    await service.createPasskey('Alice');
+
+    expect(store.getWebAuthnUserId).toHaveBeenCalledWith('Alice');
+  });
+
+  it('reuses the stored handle for the same account instead of generating a new one', async () => {
     // 16 zero bytes, base64url
     const storedHandle = 'AAAAAAAAAAAAAAAAAAAAAA';
     store.getWebAuthnUserId.mockReturnValue(storedHandle);
 
-    await service.createPasskey('Alice');
+    await service.createPasskey('Alice', 'alice@example.com');
 
     expect(store.setWebAuthnUserId).not.toHaveBeenCalled();
     const passedUserId = createMock.mock.calls[0][0].publicKey.user.id as Uint8Array;
     expect(Array.from(passedUserId)).toEqual(Array.from(base64UrlDecode(storedHandle)));
   });
 
+  it('mints a fresh handle for a second account (no handle stored for it yet)', async () => {
+    // The store returns null for bob's key because only alice's was set.
+    store.getWebAuthnUserId.mockImplementation((key: string) =>
+      key === 'alice@example.com' ? 'AAAAAAAAAAAAAAAAAAAAAA' : null);
+
+    await service.createPasskey('Bob', 'bob@example.com');
+
+    expect(store.setWebAuthnUserId).toHaveBeenCalledWith('bob@example.com', expect.any(String));
+    const persisted = store.setWebAuthnUserId.mock.calls[0][1];
+    expect(persisted).not.toBe('AAAAAAAAAAAAAAAAAAAAAA');
+  });
+
   it('stores the created credential id and returns it', async () => {
-    const credentialId = await service.createPasskey('Alice');
+    const credentialId = await service.createPasskey('Alice', 'alice@example.com');
 
     expect(store.setCredentialId).toHaveBeenCalledWith(credentialId);
     expect(credentialId).toBeTruthy();

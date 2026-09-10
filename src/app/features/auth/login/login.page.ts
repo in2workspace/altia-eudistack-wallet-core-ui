@@ -83,6 +83,7 @@ export class LoginPage implements OnDestroy {
   needsPasskeySetup = false;
   deviceName = '';
   private matchedPasskeyId: string | null = null;
+  private passkeyRetryTimer: ReturnType<typeof setTimeout> | null = null;
   readonly resendSecondsLeft = signal(0);
   private resendTimer: ReturnType<typeof setInterval> | null = null;
   private passkeyFromRefreshToken = false;
@@ -176,11 +177,13 @@ export class LoginPage implements OnDestroy {
   ionViewWillLeave(): void {
     this.stopResendCountdown();
     this.clearInitWatchdog();
+    this.clearPasskeyRetryTimer();
   }
 
   ngOnDestroy(): void {
     this.stopResendCountdown();
     this.clearInitWatchdog();
+    this.clearPasskeyRetryTimer();
   }
 
   async installApp(): Promise<void> {
@@ -391,19 +394,31 @@ export class LoginPage implements OnDestroy {
       },
       error: (err) => {
         // A single network/5xx blip here used to force needsPasskeySetup=true
-        // immediately, which meant repeating device registration for a transient
-        // failure unrelated to whether the passkey is actually still registered.
-        // Retry once before falling back to the fail-safe.
+        // immediately, repeating device registration for a transient failure
+        // unrelated to whether the passkey is actually still registered.
+        // Retry once; the timer is cancelled on view leave/destroy.
         if (!retriedAfterError) {
           console.warn('[LoginPage] listPasskeys failed, retrying once', err);
-          setTimeout(() => this.resolvePasskeySetupStep(true), 1000);
+          this.clearPasskeyRetryTimer();
+          this.passkeyRetryTimer = setTimeout(() => this.resolvePasskeySetupStep(true), 1000);
           return;
         }
+        // Fail-safe after the retry: could not confirm the account's server-side
+        // devices, so assume registration is needed. Drop any stale matched id so
+        // a later confirm-session cannot reuse it.
         console.warn('[LoginPage] listPasskeys failed twice, defaulting to needsPasskeySetup=true', err);
+        this.matchedPasskeyId = null;
         this.needsPasskeySetup = true;
         this.finishPasskeySetupStep();
       }
     });
+  }
+
+  private clearPasskeyRetryTimer(): void {
+    if (this.passkeyRetryTimer !== null) {
+      clearTimeout(this.passkeyRetryTimer);
+      this.passkeyRetryTimer = null;
+    }
   }
 
   private finishPasskeySetupStep(): void {
@@ -425,7 +440,7 @@ export class LoginPage implements OnDestroy {
         await firstValueFrom((this.authService as RemoteAuthService).refreshAccessToken());
       }
 
-      await this.confirmSessionIfMatched();
+      await this.attributeSessionToDevicePasskey();
       await this.syncCredentialsThenNavigate();
     } catch (err: any) {
       if (this.passkeyFromRefreshToken) {
@@ -529,18 +544,35 @@ export class LoginPage implements OnDestroy {
   }
 
   /**
-   * Attributes this session's refresh token to the passkey that just verified it
-   * (existing-device path), so the backend can later revoke/rotate this device's
-   * tokens without touching the account's other devices. Best-effort: linking
-   * must never block a login that already passed WebAuthn verification.
+   * Attributes this session's refresh token to the passkey that just verified it,
+   * so the backend can revoke/rotate this device's tokens without touching the
+   * account's other devices. Covers both entry points: the OTP flow (where
+   * `resolvePasskeySetupStep` already resolved `matchedPasskeyId`) and the
+   * different-day resume flow (`ionViewWillEnter` with a stored refresh token,
+   * which never lists passkeys) — there we resolve this device's server passkey
+   * from its local credential id here. Best-effort: never blocks a login that
+   * already passed WebAuthn verification.
    */
-  private async confirmSessionIfMatched(): Promise<void> {
-    if (!this.matchedPasskeyId) return;
+  private async attributeSessionToDevicePasskey(): Promise<void> {
     const refreshToken = localStorage.getItem('wallet_refresh_token');
     if (!refreshToken) return;
 
+    let passkeyId = this.matchedPasskeyId;
+    if (!passkeyId) {
+      const localCredentialId = this.prfService.getCredentialId();
+      if (!localCredentialId) return;
+      try {
+        const passkeys = await firstValueFrom(this.passkeyApi.listPasskeys());
+        passkeyId = passkeys.find(passkey => passkey.credentialId === localCredentialId)?.id ?? null;
+      } catch (err) {
+        console.warn('[LoginPage] listPasskeys failed while attributing session', err);
+        return;
+      }
+    }
+    if (!passkeyId) return;
+
     try {
-      await firstValueFrom(this.passkeyApi.confirmSession(this.matchedPasskeyId, refreshToken));
+      await firstValueFrom(this.passkeyApi.confirmSession(passkeyId, refreshToken));
     } catch (err) {
       console.warn('[LoginPage] confirm-session failed, session stays unattributed', err);
     }

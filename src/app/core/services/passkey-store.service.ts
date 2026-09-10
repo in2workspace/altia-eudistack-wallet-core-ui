@@ -7,7 +7,7 @@ const DB_VERSION = 1;
 
 const KEY_CREDENTIAL_ID = 'credential_id';
 const KEY_HAS_PASSKEY = 'has_passkey';
-const KEY_WEBAUTHN_USER_ID = 'webauthn_user_id';
+const KEY_WEBAUTHN_USER_ID_PREFIX = 'webauthn_user_id:';
 
 /**
  * Persists passkey metadata (credential ID and presence flag) in IndexedDB.
@@ -33,13 +33,15 @@ export class PasskeyStoreService {
   }
 
   /**
-   * Stable WebAuthn `user.id` handle for this browser profile. Kept separate from
-   * `credential_id`/`has_passkey` and untouched by `clear()`/`clearCredentialId()`
-   * so a retry after a failed passkey registration reuses the same handle instead
-   * of asking the authenticator to create another resident credential.
+   * Stable WebAuthn `user.id` handle for one account (`accountKey`, e.g. its email).
+   * Kept per-account, not per-browser: reusing it lets a retry after a failed
+   * registration replace the same resident credential instead of creating another,
+   * but a *different* account on the same profile must get its own handle or the
+   * authenticator would overwrite the first account's credential (EUD-8). Kept
+   * across `clear()`/`clearCredentialId()` so a same-account re-onboard reuses it.
    */
-  getWebAuthnUserId(): string | null {
-    return (this.cache.get(KEY_WEBAUTHN_USER_ID) as string) ?? null;
+  getWebAuthnUserId(accountKey: string): string | null {
+    return (this.cache.get(KEY_WEBAUTHN_USER_ID_PREFIX + accountKey) as string) ?? null;
   }
 
   // --- Async writes (persist to IndexedDB + update cache) ---
@@ -58,16 +60,17 @@ export class PasskeyStoreService {
     await this.put({ key: KEY_HAS_PASSKEY, value });
   }
 
-  async setWebAuthnUserId(id: string): Promise<void> {
-    this.cache.set(KEY_WEBAUTHN_USER_ID, id);
-    await this.put({ key: KEY_WEBAUTHN_USER_ID, value: id });
+  async setWebAuthnUserId(accountKey: string, id: string): Promise<void> {
+    this.cache.set(KEY_WEBAUTHN_USER_ID_PREFIX + accountKey, id);
+    await this.put({ key: KEY_WEBAUTHN_USER_ID_PREFIX + accountKey, value: id });
   }
 
   /**
-   * Clears credential_id/has_passkey only — deliberately leaves webauthn_user_id
-   * in place, on disk and in cache, so a later passkey registration on this
-   * device (self-revoke re-onboarding, or a retry after a failed registration
-   * via `clearCredentialId()`) reuses the same WebAuthn user handle.
+   * Clears credential_id/has_passkey only — deliberately leaves the per-account
+   * `webauthn_user_id:<accountKey>` entries in place, on disk and in cache, so a
+   * later passkey registration by the same account (self-revoke re-onboarding, or
+   * a retry after a failed registration via `clearCredentialId()`) reuses that
+   * account's WebAuthn user handle.
    */
   async clear(): Promise<void> {
     this.cache.delete(KEY_CREDENTIAL_ID);
