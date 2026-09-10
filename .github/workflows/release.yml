@@ -1,0 +1,40 @@
+name: Release SPA
+
+on:
+  push:
+    branches:
+      - 'release/v*.*.*'
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+
+permissions:
+  actions: read
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  release:
+    uses: in2workspace/eudistack-devops-workflows/.github/workflows/spa-release.yml@6dead093a3a5aba68940eda4958afd4f3a6a3702
+    with:
+      project_name: eudistack
+      region_code: ew1
+      spa_prefix: /wallet/
+      staging_environment: stg
+      production_environment: pro
+      staging_smoke_url: https://sandbox.stg.eudistack.net/wallet/
+      production_smoke_url: https://sandbox.eudistack.net/wallet/
+      build_command: >-
+        npm run build -- --configuration production --output-path=./dist/out
+        --base-href=/wallet/ --deploy-url=/wallet/
+      build_output: dist/out/browser
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      AWS_ACCESS_KEY_ID_STG: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY_STG: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_ACCESS_KEY_ID_PRO: ${{ secrets.AWS_ACCESS_KEY_ID_PRO }}
+      AWS_SECRET_ACCESS_KEY_PRO: ${{ secrets.AWS_SECRET_ACCESS_KEY_PRO }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}

@@ -1,0 +1,40 @@
+name: Deploy DEV
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - '.github/**'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - 'config/trivy/**'
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+  security-events: write
+
+jobs:
+  analyze:
+    uses: in2workspace/eudistack-devops-workflows/.github/workflows/common-codeql-javascript.yml@6dead093a3a5aba68940eda4958afd4f3a6a3702
+
+  deploy:
+    uses: in2workspace/eudistack-devops-workflows/.github/workflows/spa-cd-dev.yml@6dead093a3a5aba68940eda4958afd4f3a6a3702
+    with:
+      project_name: eudistack
+      region_code: ew1
+      environment: dev
+      spa_prefix: /wallet/
+      smoke_url: https://sandbox.dev.eudistack.net/wallet/
+      build_command: >-
+        npm run build -- --configuration production --output-path=./dist/out
+        --base-href=/wallet/ --deploy-url=/wallet/
+      build_output: dist/out/browser
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      AWS_ACCESS_KEY_ID_DEV: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY_DEV: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
