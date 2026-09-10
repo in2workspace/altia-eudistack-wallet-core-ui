@@ -187,7 +187,8 @@
     "errors": {
       "too-many-attempts": "Too many attempts. Please try again later.",
       "too-many-attempts-otp": "Too many incorrect attempts. Please request a new code.",
-      "passkey-register-failed": "Failed to register this device. Please try again."
+      "passkey-register-failed": "Failed to register this device. Please try again.",
+      "session-expired-request-code": "Your session has expired. Request a new verification code to continue opening your credential offer."
     }
   },
   "otp-input": {

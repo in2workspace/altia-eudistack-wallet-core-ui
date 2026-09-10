@@ -409,23 +409,38 @@ export class LoginPage implements OnDestroy {
     this.loading = true;
     this.errorMessage = '';
 
+    // 1. Local authentication (Biometrics / WebAuthn)
     try {
       await this.authenticateLocally();
+    } catch (err: any) {
+      // WebAuthn error or cancellation: stay on 'passkey' step
+      // with the original browser/system error message.
+      this.errorMessage = err?.message || 'Passkey verification failed';
+      this.loading = false;
+      return;
+    }
 
+    // 2. Network operations (Refresh and Sync)
+    try {
       if (this.passkeyFromRefreshToken) {
-        await firstValueFrom((this.authService as RemoteAuthService).refreshAccessToken());
+        // If it fails with 'clear-only', RemoteAuthService clears localStorage automatically
+        await firstValueFrom(
+          (this.authService as RemoteAuthService).refreshAccessToken({ onAuthFailure: 'clear-only' })
+        );
       }
 
       await this.syncCredentialsThenNavigate();
     } catch (err: any) {
       if (this.passkeyFromRefreshToken) {
-        localStorage.removeItem('wallet_refresh_token');
+        // Token has expired: return to the start of the flow with recovery message
         this.passkeyFromRefreshToken = false;
         this.step.set('email');
-        this.errorMessage = 'Your session has expired. Please sign in again.';
+        this.errorMessage = this.translate.instant('auth.errors.session-expired-request-code');
+        // PENDING_DEEP_LINK_KEY stays intact to allow resumption after OTP
       } else {
         this.errorMessage = err?.message || 'Passkey verification failed';
       }
+    } finally {
       this.loading = false;
     }
   }
