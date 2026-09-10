@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **Surfaced session expiry during passkey verification**: when a passkey login fails due to an expired refresh token (e.g., resuming a deep-link flow after a long period), the wallet now distinguishes between a WebAuthn failure (staying on the passkey step with the original error) and a token failure. Token failures now trigger a controlled state clearance (`onAuthFailure: 'clear-only'`) and return the holder to the initial email step with a dedicated "session expired" message (`auth.errors.session-expired-request-code`), instead of potentially leaving the wallet in an inconsistent state or showing a generic WebAuthn error.
+
+### Added
+
+- **Core services test coverage**: implemented full unit test suites for `passkey-api.service`, `local-auth.service`, `url-resolver.service`, `credential-decision.service`, `issuer-notification.service`, and `passkey-prf.service`, achieving >98% line coverage for the core service layer. `jest.config.js` was updated to include these services in the coverage reports.
+
+### Changed
+
+- **CodeQL-compliant test domains**: replaced generic `example.com` and `test.com` domains in `url-resolver.service.spec.ts` with `.local` suffixes to prevent static analysis tools from flagging literal URL strings as unescaped regular expressions.
+
 ### Fixed
 
 - **Wallet sessions could be silently closed with no warning, sometimes less than 20 minutes after login (E-02)**: when the automatic background token refresh failed, `RemoteAuthService` redirected straight to the login screen with no explanation. It now shows the existing "your session has expired" notice in that case too. A redundant duplicate `forceLogout()` call on the same failure was also removed.
