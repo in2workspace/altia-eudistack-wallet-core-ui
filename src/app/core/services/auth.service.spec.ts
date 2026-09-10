@@ -15,8 +15,8 @@ import { ToastServiceHandler } from '../../shared/services/toast.service';
 import { environment } from 'src/environments/environment';
 
 class MockToastServiceHandler {
-  showErrorAlert(_message: string) {}
-  showErrorAlertByTranslateLabel(_message: string) {}
+  showErrorAlert(_message: string) { return of(undefined); }
+  showErrorAlertByTranslateLabel(_message: string) { return of(undefined); }
 }
 
 /**
