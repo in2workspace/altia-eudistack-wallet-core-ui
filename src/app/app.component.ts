@@ -87,7 +87,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.oid4vciEngine.init().catch(console.error);
   }
 
-  /** AC-008.10: fires once when an iOS PWA opens in standalone for the first time. */
+  /** AC-008.10: fires once when an iOS PWA opens in standalone for the first time */
   private trackIosFirstStandaloneBoot(): void {
     const ua = navigator.userAgent;
     const isIosDevice = /iP(hone|od|ad)/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
