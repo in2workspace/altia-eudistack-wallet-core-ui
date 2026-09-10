@@ -465,4 +465,44 @@ describe('HttpErrorInterceptor — session-expiry marker coordination', () => {
       },
     });
   });
+
+  it('suppresses silently, falling back to errorResp.message, when logged out and the response has no error.message', (done) => {
+    mockAuthService.isLoggedIn.mockReturnValue(false);
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+    const unmarkedError = new HttpErrorResponse({
+      status: 500,
+      url: 'http://localhost/api/v1/activity',
+      statusText: 'Internal Server Error',
+    });
+
+    const fakeNext: HttpHandler = { handle: () => throwError(() => unmarkedError) };
+    const req = new HttpRequest('GET', 'http://localhost/api/v1/activity');
+
+    interceptor.intercept(req, fakeNext).subscribe({
+      error: () => {
+        expect(consoleSpy).toHaveBeenCalledWith('Handled silently:', expect.stringContaining('Http failure response'));
+        consoleSpy.mockRestore();
+        done();
+      },
+    });
+  });
+
+  it('suppresses silently, falling back to the generic message, when logged out and the response carries no message at all', (done) => {
+    mockAuthService.isLoggedIn.mockReturnValue(false);
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+    const unmarkedError = { status: 0 } as HttpErrorResponse;
+
+    const fakeNext: HttpHandler = { handle: () => throwError(() => unmarkedError) };
+    const req = new HttpRequest('GET', 'http://localhost/api/v1/activity');
+
+    interceptor.intercept(req, fakeNext).subscribe({
+      error: () => {
+        expect(consoleSpy).toHaveBeenCalledWith('Handled silently:', 'Unknown Http error');
+        consoleSpy.mockRestore();
+        done();
+      },
+    });
+  });
 });
