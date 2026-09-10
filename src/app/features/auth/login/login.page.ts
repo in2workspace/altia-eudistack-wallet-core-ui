@@ -175,12 +175,15 @@ export class LoginPage implements OnDestroy {
   }
 
   ionViewWillLeave(): void {
-    this.stopResendCountdown();
-    this.clearInitWatchdog();
-    this.clearPasskeyRetryTimer();
+    this.teardownTimers();
   }
 
   ngOnDestroy(): void {
+    this.teardownTimers();
+  }
+
+  /** Cancels every pending timer this page owns (resend cooldown, init watchdog, passkey retry). */
+  private teardownTimers(): void {
     this.stopResendCountdown();
     this.clearInitWatchdog();
     this.clearPasskeyRetryTimer();
