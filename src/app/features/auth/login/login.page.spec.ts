@@ -29,7 +29,7 @@ describe('LoginPage (server mode)', () => {
     getCredentialId: jest.Mock;
   };
   let mockPasskeyStore: { getCredentialId: jest.Mock; hasPasskey: jest.Mock; clearCredentialId: jest.Mock };
-  let mockPasskeyApi: { registerPasskey: jest.Mock; listPasskeys: jest.Mock };
+  let mockPasskeyApi: { registerPasskey: jest.Mock; listPasskeys: jest.Mock; confirmSession: jest.Mock };
   let mockRouter: { navigateByUrl: jest.Mock };
   let mockWalletService: { syncCredentials: jest.Mock };
   let mockActivityService: { syncFromServer: jest.Mock };
@@ -67,6 +67,7 @@ describe('LoginPage (server mode)', () => {
     mockPasskeyApi = {
       registerPasskey: jest.fn().mockReturnValue(of({ id: 'p1', credentialId: 'cred-local-1', displayName: 'device' })),
       listPasskeys: jest.fn().mockReturnValue(of([])),
+      confirmSession: jest.fn().mockReturnValue(of(undefined)),
     };
     mockRouter = { navigateByUrl: jest.fn() };
     mockWalletService = { syncCredentials: jest.fn().mockReturnValue(of(undefined)) };
@@ -323,6 +324,8 @@ describe('LoginPage (server mode)', () => {
       expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
       expect(component.errorMessage).toBeTruthy();
       expect(component.loading).toBe(false);
+      // Local credential state is rolled back so the next attempt starts clean.
+      expect(mockPasskeyStore.clearCredentialId).toHaveBeenCalled();
     });
 
     it('allows a retry that succeeds after a prior failure', async () => {
@@ -374,6 +377,69 @@ describe('LoginPage (server mode)', () => {
       expect(component.needsPasskeySetup).toBe(true);
       expect(component.step()).toBe('passkey');
       expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('session linking (confirm-session / refreshToken)', () => {
+    beforeEach(() => {
+      Object.defineProperty(globalThis.navigator, 'credentials', {
+        value: { get: jest.fn().mockResolvedValue({}) },
+        configurable: true,
+        writable: true,
+      });
+    });
+
+    it('sends the stored refresh token when registering a new device passkey', async () => {
+      localStorage.setItem('wallet_refresh_token', 'stored-refresh-token');
+      component.deviceName = 'My Device';
+
+      await component.createPasskeyForDevice();
+
+      expect(mockPasskeyApi.registerPasskey).toHaveBeenCalledWith(
+        expect.objectContaining({ refreshToken: 'stored-refresh-token' })
+      );
+    });
+
+    it('links the verified session to its passkey via confirm-session (existing device)', async () => {
+      localStorage.setItem('wallet_refresh_token', 'stored-refresh-token');
+      mockPasskeyApi.listPasskeys.mockReturnValue(of([
+        { id: 'p-server-1', credentialId: 'cred-local-1', displayName: 'This Laptop', createdAt: '', lastUsedAt: null, activeSessions: 1 }
+      ]));
+      component.email = 'user@example.com';
+      component.otpValue = '123456';
+      component.verifyCode();
+      expect(component.needsPasskeySetup).toBe(false);
+
+      await component.verifyPasskey();
+
+      expect(mockPasskeyApi.confirmSession).toHaveBeenCalledWith('p-server-1', 'stored-refresh-token');
+      expect(mockRouter.navigateByUrl).toHaveBeenCalled();
+    });
+
+    it('skips confirm-session when no server-side passkey matched this device', async () => {
+      localStorage.setItem('wallet_refresh_token', 'stored-refresh-token');
+      component.needsPasskeySetup = false;
+
+      await component.verifyPasskey();
+
+      expect(mockPasskeyApi.confirmSession).not.toHaveBeenCalled();
+      expect(mockRouter.navigateByUrl).toHaveBeenCalled();
+    });
+
+    it('does not block login when confirm-session fails', async () => {
+      localStorage.setItem('wallet_refresh_token', 'stored-refresh-token');
+      mockPasskeyApi.listPasskeys.mockReturnValue(of([
+        { id: 'p-server-1', credentialId: 'cred-local-1', displayName: 'This Laptop', createdAt: '', lastUsedAt: null, activeSessions: 1 }
+      ]));
+      mockPasskeyApi.confirmSession.mockReturnValue(throwError(() => ({ status: 500 })));
+      component.email = 'user@example.com';
+      component.otpValue = '123456';
+      component.verifyCode();
+
+      await component.verifyPasskey();
+
+      expect(mockPasskeyApi.confirmSession).toHaveBeenCalled();
+      expect(mockRouter.navigateByUrl).toHaveBeenCalled();
     });
   });
 
