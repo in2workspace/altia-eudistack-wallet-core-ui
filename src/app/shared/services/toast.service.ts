@@ -3,6 +3,22 @@ import { TranslateService } from '@ngx-translate/core';
 import { map, Observable, take } from 'rxjs';
 import { AlertController } from '@ionic/angular';
 
+/**
+ * Fixed destination for the "contact support" link embedded in some error
+ * messages. Kept out of the translated strings themselves — see
+ * SUPPORT_LINK_PLACEHOLDER.
+ */
+const SUPPORT_URL = 'https://ticketing.dome-marketplace.eu/';
+
+/**
+ * Token a translated message can contain to ask for the support link to be
+ * inlined. Swapped for a real anchor tag *after* escaping (see
+ * `renderMessage`), so the anchor itself — built in code, not translator
+ * content — is the only markup that ever reaches the DOM. Translator-authored
+ * prose stays escaped, preserving the EUD-142 (F2) XSS hardening.
+ */
+const SUPPORT_LINK_PLACEHOLDER = '{{supportLink}}';
+
 const ERROR_TRANSLATION_MAP: Record<string, string> = {
   'The received QR content cannot be processed': 'errors.invalid-qr',
   'There are no credentials available to login': 'errors.no-credentials-available',
@@ -44,7 +60,7 @@ export class ToastServiceHandler {
         const alert = await this.alertController.create({
           message: `
             <div style="display: flex; align-items: center; gap: 50px;">
-              <span>${this.escapeHtml(translatedMessage)}</span>
+              <span>${this.renderMessage(translatedMessage)}</span>
             </div>
           `,
           buttons: [
@@ -102,6 +118,25 @@ export class ToastServiceHandler {
         setTimeout(() => el.remove(), 500);
       }, durationMs);
     });
+  }
+
+  /**
+   * Escapes the translated message, then — only if present — swaps
+   * SUPPORT_LINK_PLACEHOLDER for a real anchor. href/target/rel and the
+   * anchor's own label translation are all code-controlled, so the only
+   * markup this can ever emit is the fixed support link; everything else
+   * from the translated string stays escaped.
+   */
+  private renderMessage(translatedMessage: string): string {
+    const escaped = this.escapeHtml(translatedMessage);
+    if (!escaped.includes(SUPPORT_LINK_PLACEHOLDER)) {
+      return escaped;
+    }
+
+    const label = this.escapeHtml(this.translate.instant('errors.support-team-label'));
+    const link = `<a href="${SUPPORT_URL}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+
+    return escaped.split(SUPPORT_LINK_PLACEHOLDER).join(link);
   }
 
   private escapeHtml(value: string): string {

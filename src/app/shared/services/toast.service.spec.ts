@@ -345,6 +345,57 @@ describe('ToastServiceHandler', () => {
     }));
   });
 
+  describe('support link placeholder (errors.default, pin-expired, etc.)', () => {
+    it('replaces {{supportLink}} with a code-built anchor pointing at the fixed support URL', fakeAsync(() => {
+      translateService.get.mockImplementationOnce(() => of('Something went wrong. Contact {{supportLink}}.'));
+      translateService.instant.mockImplementation((key: string) =>
+        key === 'errors.support-team-label' ? 'the support team' : key
+      );
+      const toastCtrlSpy = jest.spyOn(alertCtrl, 'create');
+
+      service.showErrorAlertByTranslateLabel('errors.default').subscribe(() => {});
+      tick();
+
+      const [call] = toastCtrlSpy.mock.calls;
+      const message = (call[0] as { message: string }).message;
+      expect(message).toContain(
+        "<a href=\"https://ticketing.dome-marketplace.eu/\" target=\"_blank\" rel=\"noopener noreferrer\">the support team</a>"
+      );
+      expect(message).not.toContain('{{supportLink}}');
+    }));
+
+    it('still escapes markup surrounding the placeholder, and escapes the link label too', fakeAsync(() => {
+      translateService.get.mockImplementationOnce(() => of('<b>Alert</b> contact {{supportLink}}.'));
+      translateService.instant.mockImplementation((key: string) =>
+        key === 'errors.support-team-label' ? '<i>support</i>' : key
+      );
+      const toastCtrlSpy = jest.spyOn(alertCtrl, 'create');
+
+      service.showErrorAlertByTranslateLabel('errors.default').subscribe(() => {});
+      tick();
+
+      const [call] = toastCtrlSpy.mock.calls;
+      const message = (call[0] as { message: string }).message;
+      expect(message).toContain('&lt;b&gt;Alert&lt;/b&gt;');
+      expect(message).toContain('&lt;i&gt;support&lt;/i&gt;');
+      expect(message).not.toContain('<b>Alert</b>');
+      expect(message).not.toContain('<i>support</i>');
+    }));
+
+    it('leaves messages without the placeholder untouched (no stray link)', fakeAsync(() => {
+      translateService.get.mockImplementationOnce(() => of('Plain message, no link needed.'));
+      const toastCtrlSpy = jest.spyOn(alertCtrl, 'create');
+
+      service.showErrorAlertByTranslateLabel('errors.qr-expired').subscribe(() => {});
+      tick();
+
+      const [call] = toastCtrlSpy.mock.calls;
+      const message = (call[0] as { message: string }).message;
+      expect(message).toContain('Plain message, no link needed.');
+      expect(message).not.toContain('<a href');
+    }));
+  });
+
   it('should create, present, and dismiss a toast after duration', fakeAsync(async () => {
     const duration = 1500;
     const messageKey = 'toast.success';
