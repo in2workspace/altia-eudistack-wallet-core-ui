@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Surfaced session expiry during passkey verification**: when a passkey login fails due to an expired refresh token (e.g., resuming a deep-link flow after a long period), the wallet now distinguishes between a WebAuthn failure (staying on the passkey step with the original error) and a token failure. Token failures now trigger a controlled state clearance (`onAuthFailure: 'clear-only'`) and return the holder to the initial email step with a dedicated "session expired" message (`auth.errors.session-expired-request-code`), instead of potentially leaving the wallet in an inconsistent state or showing a generic WebAuthn error.
+
+### Added
+
+- **Core services test coverage**: implemented full unit test suites for `passkey-api.service`, `local-auth.service`, `url-resolver.service`, `credential-decision.service`, `issuer-notification.service`, and `passkey-prf.service`, achieving >98% line coverage for the core service layer. `jest.config.js` was updated to include these services in the coverage reports.
+
+### Changed
+
+- **CodeQL-compliant test domains**: replaced generic `example.com` and `test.com` domains in `url-resolver.service.spec.ts` with `.local` suffixes to prevent static analysis tools from flagging literal URL strings as unescaped regular expressions.
+
+### Fixed
+
 - **Wallet stuck on a spinner or an unrendered form at `/auth/login`, sometimes only recovering after a manual page refresh**: `PwaInstallService.installDecision$` — which `LoginPage` waits on before it will render the login form, to decide whether to show the "install this app" screen first — had no upper bound. It resolved once the `beforeinstallprompt` event fired or the active Service Worker took control of the page (`controllerchange`), but if neither ever happened in a given session (SW registration blocked/slow, browser never offering the install prompt), the underlying `race()` waited forever and the login form never appeared. A refresh often "fixed" it only because the SW from the previous load was already controlling the page by then. Added a 4s hard-ceiling fallback so `installDecision$` always settles.
   - `LoginPage` also gained a local initialization watchdog: a "this is taking longer than expected" message after 3s, and — as a safety net independent of the fix above — a friendly error screen after 8s. Its "try again" action forces past the stuck installability check (proceeding as if it had resolved to "not installable") rather than merely retrying the same subscription, since `installDecision$` is a `shareReplay` and a fresh subscription cannot restart it — so it genuinely recovers without a manual browser reload (a "reload the app" fallback stays available too). The watchdog's timers are also now cleared on `ionViewWillLeave`/`ngOnDestroy` so they can't fire against an unmounted page.
 
