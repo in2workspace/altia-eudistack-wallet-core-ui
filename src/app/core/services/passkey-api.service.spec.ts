@@ -1,83 +1,143 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
-import { PasskeyApiService } from './passkey-api.service';
+import { PasskeyApiService, PasskeyInfo, RegisterPasskeyRequest } from './passkey-api.service';
 import { UrlResolverService } from './url-resolver.service';
 
 describe('PasskeyApiService', () => {
   let service: PasskeyApiService;
   let httpMock: HttpTestingController;
-  const AUTH_BASE = 'https://tenant.test/api/v1/auth';
+  let urlResolverSpy: jest.Mocked<UrlResolverService>;
+
+  const mockServerUrl = 'https://backend.example.com';
+  const mockAuthBase = `${mockServerUrl}/api/v1/auth`;
+
+  const mockPasskey: PasskeyInfo = {
+    id: '1',
+    credentialId: 'cred-123',
+    displayName: 'My Device',
+    createdAt: '2023-01-01T00:00:00Z',
+    lastUsedAt: null,
+    activeSessions: 1
+  };
 
   beforeEach(() => {
+    urlResolverSpy = {
+      serverUrl: jest.fn().mockReturnValue(mockServerUrl)
+    } as any;
+
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
       providers: [
         PasskeyApiService,
-        { provide: UrlResolverService, useValue: { serverUrl: () => 'https://tenant.test' } },
-      ],
+        { provide: UrlResolverService, useValue: urlResolverSpy }
+      ]
     });
+
     service = TestBed.inject(PasskeyApiService);
     httpMock = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => httpMock.verify());
-
-  it('confirmSession POSTs the refresh token to the passkey confirm-session endpoint', () => {
-    service.confirmSession('p1', 'refresh-abc').subscribe();
-
-    const req = httpMock.expectOne(`${AUTH_BASE}/passkeys/p1/confirm-session`);
-    expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ refreshToken: 'refresh-abc' });
-    req.flush(null);
+  afterEach(() => {
+    httpMock.verify();
   });
 
-  it('registerPasskey forwards the optional refreshToken in the request body', () => {
-    service.registerPasskey({ credentialId: 'c1', displayName: 'Laptop', refreshToken: 'r1' }).subscribe();
-
-    const req = httpMock.expectOne(`${AUTH_BASE}/passkeys`);
-    expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ credentialId: 'c1', displayName: 'Laptop', refreshToken: 'r1' });
-    req.flush({});
+  it('should be created', () => {
+    expect(service).toBeTruthy();
   });
 
-  it('registerPasskey works without a refreshToken', () => {
-    service.registerPasskey({ credentialId: 'c1', displayName: 'Laptop' }).subscribe();
+  describe('registerPasskey', () => {
+    it('should POST to /passkeys', () => {
+      const request: RegisterPasskeyRequest = {
+        credentialId: 'cred-123',
+        displayName: 'My Device',
+        userAgent: 'Mozilla/5.0'
+      };
 
-    const req = httpMock.expectOne(`${AUTH_BASE}/passkeys`);
-    expect(req.request.body).toEqual({ credentialId: 'c1', displayName: 'Laptop' });
-    req.flush({});
+      service.registerPasskey(request).subscribe(response => {
+        expect(response).toEqual(mockPasskey);
+      });
+
+      const req = httpMock.expectOne(`${mockAuthBase}/passkeys`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual(request);
+      req.flush(mockPasskey);
+    });
+
+    it('should forward the optional refreshToken in the request body', () => {
+      service.registerPasskey({ credentialId: 'cred-123', displayName: 'My Device', refreshToken: 'r1' })
+        .subscribe();
+
+      const req = httpMock.expectOne(`${mockAuthBase}/passkeys`);
+      expect(req.request.body).toEqual({ credentialId: 'cred-123', displayName: 'My Device', refreshToken: 'r1' });
+      req.flush(mockPasskey);
+    });
   });
 
-  it('listPasskeys GETs the passkeys endpoint', () => {
-    service.listPasskeys().subscribe();
+  describe('listPasskeys', () => {
+    it('should GET from /passkeys', () => {
+      const mockPasskeys: PasskeyInfo[] = [mockPasskey];
 
-    const req = httpMock.expectOne(`${AUTH_BASE}/passkeys`);
-    expect(req.request.method).toBe('GET');
-    req.flush([]);
+      service.listPasskeys().subscribe(response => {
+        expect(response).toEqual(mockPasskeys);
+      });
+
+      const req = httpMock.expectOne(`${mockAuthBase}/passkeys`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockPasskeys);
+    });
   });
 
-  it('renamePasskey PATCHes the display name', () => {
-    service.renamePasskey('p1', 'New name').subscribe();
+  describe('renamePasskey', () => {
+    it('should PATCH /passkeys/{id}', () => {
+      const newName = 'Updated Device Name';
+      const updatedPasskey = { ...mockPasskey, displayName: newName };
 
-    const req = httpMock.expectOne(`${AUTH_BASE}/passkeys/p1`);
-    expect(req.request.method).toBe('PATCH');
-    expect(req.request.body).toEqual({ displayName: 'New name' });
-    req.flush({});
+      service.renamePasskey('1', newName).subscribe(response => {
+        expect(response).toEqual(updatedPasskey);
+      });
+
+      const req = httpMock.expectOne(`${mockAuthBase}/passkeys/1`);
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual({ displayName: newName });
+      req.flush(updatedPasskey);
+    });
   });
 
-  it('deletePasskey DELETEs the passkey', () => {
-    service.deletePasskey('p1').subscribe();
+  describe('deletePasskey', () => {
+    it('should DELETE /passkeys/{id}', () => {
+      service.deletePasskey('1').subscribe(response => {
+        expect(response).toBeNull();
+      });
 
-    const req = httpMock.expectOne(`${AUTH_BASE}/passkeys/p1`);
-    expect(req.request.method).toBe('DELETE');
-    req.flush(null);
+      const req = httpMock.expectOne(`${mockAuthBase}/passkeys/1`);
+      expect(req.request.method).toBe('DELETE');
+      req.flush(null);
+    });
   });
 
-  it('revokeSessions POSTs to the revoke-sessions endpoint', () => {
-    service.revokeSessions('p1').subscribe();
+  describe('revokeSessions', () => {
+    it('should POST to /passkeys/{id}/revoke-sessions', () => {
+      service.revokeSessions('1').subscribe(response => {
+        expect(response).toBeNull();
+      });
 
-    const req = httpMock.expectOne(`${AUTH_BASE}/passkeys/p1/revoke-sessions`);
-    expect(req.request.method).toBe('POST');
-    req.flush(null);
+      const req = httpMock.expectOne(`${mockAuthBase}/passkeys/1/revoke-sessions`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({});
+      req.flush(null);
+    });
+  });
+
+  describe('confirmSession', () => {
+    it('should POST the refresh token to /passkeys/{id}/confirm-session', () => {
+      service.confirmSession('1', 'refresh-abc').subscribe(response => {
+        expect(response).toBeNull();
+      });
+
+      const req = httpMock.expectOne(`${mockAuthBase}/passkeys/1/confirm-session`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ refreshToken: 'refresh-abc' });
+      req.flush(null);
+    });
   });
 });
