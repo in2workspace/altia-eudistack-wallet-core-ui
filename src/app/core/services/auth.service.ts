@@ -10,6 +10,8 @@ import { IssuerMetadataCacheService } from './issuer-metadata-cache.service';
 import { UrlResolverService } from './url-resolver.service';
 import { TenantService } from './tenant.service';
 
+export type AuthFailureMode = 'force-logout' | 'clear-only';
+
 export interface TokenPairResponse {
   accessToken: string;
   refreshToken: string;
@@ -99,7 +101,7 @@ export class RemoteAuthService extends AuthService implements OnDestroy {
 
   // --- Token management ---
 
-  refreshAccessToken(options?: { onAuthFailure?: 'force-logout' | 'clear-only' }): Observable<TokenPairResponse> {
+  refreshAccessToken(options?: { onAuthFailure?: AuthFailureMode }): Observable<TokenPairResponse> {
     if (!this.refreshTokenValue) {
       return throwError(() => new Error('No refresh token'));
     }
