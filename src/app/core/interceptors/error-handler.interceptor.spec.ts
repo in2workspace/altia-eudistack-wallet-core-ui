@@ -21,7 +21,7 @@ describe('HttpErrorInterceptor with HttpClient', () => {
   let httpClient: HttpClient;
   let httpMock: HttpTestingController;
   let mockToastServiceHandler: MockToastServiceHandler;
-  let mockAuthService: { forceLogout: jest.Mock };
+  let mockAuthService: { forceLogout: jest.Mock, isLoggedIn: jest.Mock };
 
   beforeAll(() => {
     Object.defineProperty(window, 'location', {
@@ -32,7 +32,7 @@ describe('HttpErrorInterceptor with HttpClient', () => {
 
   beforeEach(() => {
     mockToastServiceHandler = new MockToastServiceHandler();
-    mockAuthService = { forceLogout: jest.fn() };
+    mockAuthService = { forceLogout: jest.fn(), isLoggedIn: jest.fn().mockReturnValue(true) };
 
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
@@ -381,10 +381,12 @@ describe('HttpErrorInterceptor — session-expiry marker coordination', () => {
   let interceptor: HttpErrorInterceptor;
   let mockToastServiceHandler: MockToastServiceHandler;
   let sessionExpiryMarker: SessionExpiryMarkerService;
+  let mockAuthService: { isLoggedIn: jest.Mock };
 
   beforeEach(() => {
     mockToastServiceHandler = new MockToastServiceHandler();
     sessionExpiryMarker = new SessionExpiryMarkerService();
+    mockAuthService = { isLoggedIn: jest.fn().mockReturnValue(true) };
 
     TestBed.configureTestingModule({
       providers: [
@@ -392,6 +394,7 @@ describe('HttpErrorInterceptor — session-expiry marker coordination', () => {
         { provide: ToastServiceHandler, useValue: mockToastServiceHandler },
         { provide: UrlResolverService, useValue: { serverUrl: () => 'http://localhost' } },
         { provide: SessionExpiryMarkerService, useValue: sessionExpiryMarker },
+        { provide: AuthService, useValue: mockAuthService },
       ],
     });
 
@@ -433,6 +436,30 @@ describe('HttpErrorInterceptor — session-expiry marker coordination', () => {
     interceptor.intercept(req, fakeNext).subscribe({
       error: () => {
         expect(toastSpy).toHaveBeenCalledWith('Unauthorized');
+        expect(dedicatedSpy).not.toHaveBeenCalled();
+        done();
+      },
+    });
+  });
+
+  it('suppresses the generic toast for an unmarked error once the user is already logged out, to avoid stacking it on top of the dedicated session-expired notice', (done) => {
+    mockAuthService.isLoggedIn.mockReturnValue(false);
+
+    const unmarkedError = new HttpErrorResponse({
+      status: 401,
+      url: 'http://localhost/api/v1/credentials',
+      error: { message: 'Unauthorized' },
+    });
+
+    const toastSpy = jest.spyOn(mockToastServiceHandler, 'showErrorAlert');
+    const dedicatedSpy = jest.spyOn(mockToastServiceHandler, 'showErrorAlertByTranslateLabel');
+
+    const fakeNext: HttpHandler = { handle: () => throwError(() => unmarkedError) };
+    const req = new HttpRequest('GET', 'http://localhost/api/v1/credentials');
+
+    interceptor.intercept(req, fakeNext).subscribe({
+      error: () => {
+        expect(toastSpy).not.toHaveBeenCalled();
         expect(dedicatedSpy).not.toHaveBeenCalled();
         done();
       },
