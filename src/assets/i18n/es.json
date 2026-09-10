@@ -7,12 +7,18 @@
     "terms-of-user": "Términos de Uso",
     "privacy-policy": "Política de Privacidad",
     "faqs": "FAQs",
+    "signed-in-as": "Sesión iniciada como",
+    "activity": "Actividad",
+    "connected-devices": "Dispositivos conectados",
     "settings": "Ajustes",
+    "about": "Acerca de",
+    "signed-in-as": "Sesión iniciada como",
     "logout": "Cerrar sesión",
     "install": "Instalar app",
     "wallet": "Cartera"
   },
   "camera-selector": {
+    "device-label": "Cámara",
     "title": "Cámara seleccionada",
     "settings": "Configuración de la cámara",
     "no-device": "Sin dispositivo",
@@ -29,7 +35,16 @@
     "add": "Añade",
     "nocred": "No tienes ninguna credencial cargada",
     "nocred-title": "Sin credenciales",
-    "nocred-subtitle": "Escanea un código QR o acepta una oferta de credencial para empezar.",
+    "nocred-subtitle": "Tus credenciales verificadas aparecerán aquí en cuanto se añadan a tu cartera.",
+    "nocred-scan": "Escanear código QR",
+    "show-data": "Mostrar datos",
+    "hide-data": "Ocultar datos",
+    "how-it-works": {
+      "title": "¿Cómo funciona?",
+      "step-scan": "Escanea un código QR",
+      "step-add": "Añade la credencial",
+      "step-manage": "Gestiónala aquí"
+    },
     "expiration": "Caducado",
     "expiring-soon": "Caduca pronto",
     "expiredCredential": "Credencial caducada",
@@ -50,7 +65,9 @@
     "install-hint": "Instala la app para una mejor experiencia"
   },
   "language-selector": {
-    "title": "Selector de idioma"
+    "title": "Idioma",
+    "subtitle": "Elige el idioma de la interfaz de la wallet.",
+    "back-to-wallet": "Volver a la wallet"
   },
   "ui-translation": {
     "title": "¿No encuentras tu idioma?",
@@ -77,6 +94,26 @@
   },
   "mailto_permission_alert": "Por favor, asegúrate de que tienes los permisos necesarios para enviar correos electrónicos con tu aplicación de correo predeterminada. Si el servicio de correo no se abre, es probable que se deba a restricciones de permisos.",
   "auth": {
+    "access": {
+      "title": "Accede a {{brand}} de forma segura",
+      "install-hint": "Para la mejor experiencia y acceso offline, instala la app del wallet en tu dispositivo.",
+      "open-hint": "Si ya tienes el Wallet de {{brand}}, ábrelo para continuar. Si no, instálalo para empezar.",
+      "continue-wallet": "Continuar con el Wallet de {{brand}}",
+      "already-title": "¿Ya tienes un Wallet de {{brand}}?",
+      "already-text": "Si tu wallet ya está configurado en otro dispositivo, tus credenciales existentes se recuperarán.",
+      "help-link": "¿Necesitas ayuda? Más información",
+      "help": {
+        "title": "¿Necesitas ayuda?",
+        "intro": "Si no puedes escanear el código QR, introduce el código de activación que te han proporcionado.",
+        "q1": "Ya tengo un Wallet de {{brand}}. ¿Necesito crear una cuenta nueva?",
+        "a1": "No. Durante la configuración se recuperarán tus credenciales existentes.",
+        "q2": "¿Y si estoy usando un dispositivo nuevo?",
+        "a2": "Te guiaremos por los pasos necesarios para acceder de forma segura a tu cuenta de {{brand}}.",
+        "q3": "¿Puedo continuar sin instalar el Wallet?",
+        "a3": "Sí. Puedes continuar en el navegador, aunque algunas funcionalidades pueden estar limitadas.",
+        "close": "Cerrar"
+      }
+    },
     "login": {
       "title": "Registra tu dispositivo",
       "title-welcome": "Bienvenido",
@@ -84,7 +121,15 @@
       "create-passkey-subtitle": "Tu passkey mantiene tu wallet segura. La usarás para iniciar sesión.",
       "passkey-button": "Iniciar sesión con Passkey",
       "enter-email": "Introduce tu email para empezar",
-      "verify-passkey": "Verifica tu identidad con tu passkey"
+      "verify-passkey": "Verifica tu identidad con tu passkey",
+      "initializing": "Preparando tu wallet…",
+      "initializing-slow": "Esto está tardando más de lo habitual…",
+      "init-error-title": "No se ha podido cargar tu wallet",
+      "init-error-subtitle": "Ha ocurrido un problema al preparar la aplicación. Puedes reintentar o recargar la página.",
+      "retry": "Reintentar",
+      "reload-app": "Recargar la aplicación",
+      "email-title": "Continúa con tu email",
+      "email-subtitle": "Introduce la dirección de email asociada a tu cuenta de {{brand}}."
     },
     "register": {
       "email-placeholder": "Introduce tu email",
@@ -95,7 +140,17 @@
       "install-title": "Instalar la App",
       "install-subtitle": "Para la mejor experiencia y acceso offline, instala la app del wallet en tu dispositivo.",
       "install-button": "Instalar App",
-      "continue-browser": "Continuar en el navegador"
+      "continue-browser": "Continuar en el navegador",
+      "email-label": "Email",
+      "verify-title": "Verifica tu dirección de email",
+      "code-sent-prefix": "Introduce el código de verificación enviado a tu dirección de email",
+      "code-validity": "El código es válido durante un tiempo limitado.",
+      "code-label": "Código",
+      "resend-in": "¿No has recibido el código? Reenvío disponible en {{time}}",
+      "resend-prompt": "¿No has recibido el código?",
+      "resend-action": "Reenviar",
+      "continue": "Continuar",
+      "back": "Atrás"
     },
     "passkey": {
       "title": "Configurar Passkey",
@@ -107,7 +162,11 @@
       "success": "¡Passkey registrada correctamente!",
       "status-connecting": "Preparando...",
       "status-verifying": "Esperando tu dispositivo...",
-      "retry": "Reintentar"
+      "retry": "Reintentar",
+      "verified-title": "¡Email verificado!",
+      "setup-title": "Configura una passkey",
+      "verified-subtitle": "Tu email se ha verificado correctamente.",
+      "setup-subtitle": "Configura una passkey para completar el acceso en este dispositivo."
     },
     "reauth": {
       "subtitle": "Verifica tu email para restaurar tu sesión",
@@ -116,7 +175,8 @@
     "errors": {
       "too-many-attempts": "Demasiados intentos. Por favor, inténtalo más tarde.",
       "too-many-attempts-otp": "Demasiados intentos incorrectos. Por favor, solicita un nuevo código.",
-      "passkey-register-failed": "No se ha podido registrar este dispositivo. Inténtalo de nuevo."
+      "passkey-register-failed": "No se ha podido registrar este dispositivo. Inténtalo de nuevo.",
+      "session-expired-request-code": "Tu sesión ha caducado. Solicita un código de verificación para seguir abriendo la oferta de credencial."
     }
   },
   "otp-input": {
@@ -129,6 +189,7 @@
     "error": "Nombre de usuario o contraseña incorrectos"
   },
   "settings": {
+    "theme": "Tema",
     "title": "Configuración",
     "privacy-blur": "Desenfoque de privacidad",
     "privacy-blur-desc": "Desenfoca los datos de las credenciales",
@@ -142,6 +203,9 @@
     "wallet-mode-business": "Business Wallet"
   },
   "about": {
+    "subtitle": "Conoce más sobre la wallet, accede a los recursos de soporte y consulta la información legal.",
+    "back-to-wallet": "Volver a la wallet",
+    "section-provider": "Proveedor de la wallet",
     "section-info": "Información de la aplicación",
     "section-legal": "Legal",
     "section-support": "Soporte",
@@ -155,7 +219,7 @@
     },
     "support": {
       "help-center": "Centro de ayuda",
-      "email": "Contactar por email",
+      "email": "Contactar con soporte",
       "email-copy": "Copiar dirección",
       "email-copied": "Dirección copiada",
       "report-issue": "Reportar incidencia",
@@ -216,16 +280,34 @@
     "unsigned-header": "Credencial sin firmar",
     "unsigned-message": "Su credencial aún no ha sido firmada y no puede ser utilizada. Espere a que el emisor complete el proceso de firma.",
     "revoked": "Revocado",
-    "delete-success": "Credencial eliminada correctamente"
+    "delete-success": "Credencial eliminada correctamente",
+    "badge-verified": "Credencial verificada",
+    "badge-expired": "Credencial caducada",
+    "badge-revoked": "Credencial revocada",
+    "preview-name": "Nombre",
+    "preview-issuer": "ID del emisor",
+    "preview-status": "Estado",
+    "preview-expiry": "Caducidad",
+    "lifecycle-valid": "Válida",
+    "lifecycle-issued": "Sin firmar",
+    "lifecycle-revoked": "Revocada",
+    "lifecycle-expired": "Caducada"
   },
   "scanner": {
-    "initializing": "Inicializando escáner...",
-    "manualInput": "O pega el contenido del QR manualmente:",
-    "manualInputPlaceholder": "Pega aquí el contenido del código QR...",
-    "send": "Enviar"
+    "title": "Escanea tu código QR",
+    "subtitle": "Usa la cámara de tu dispositivo para escanear el código QR",
+    "manual-hint": "¿No puedes escanear el código QR?",
+    "manual-link": "Introduce el código manualmente",
+    "manual-title": "Introduce el código manualmente",
+    "manual-description": "Si no puedes escanear el código QR, introduce el código de activación que te han facilitado.",
+    "manual-label": "Código de acceso",
+    "manual-placeholder": "Introduce el código de acceso",
+    "manual-back": "Volver a escanear el código QR",
+    "manual-continue": "Continuar",
+    "initializing": "Inicializando escáner..."
   },
   "vc-fields": {
-    "delete": "Eliminar",
+    "delete": "Eliminar credencial",
     "copy-success": "Copiado al portapapeles",
     "modal-title": "Detalles de credencial",
     "title": "Información de credenciales",
@@ -310,7 +392,8 @@
       "delete": "Eliminar",
       "attest": "Acreditar",
       "upload": "Subir"
-    }
+    },
+    "issued-by": "Emitida por"
   },
   "errors": {
     "default": "Algo ha salido mal. Si vuelve a ocurrir, contacta con el <a href='https://ticketing.dome-marketplace.eu/' target='_blank' rel='noopener noreferrer'>equipo de soporte</a>.",
@@ -383,22 +466,24 @@
   },
   "activity": {
     "title": "Actividad",
-    "filter-all": "Todas",
+    "back-to-wallet": "Volver a la wallet",
+    "filter-all": "Toda la actividad",
     "filter-issued": "Recibidas",
     "filter-presented": "Presentadas",
     "filter-deleted": "Eliminadas",
-    "empty": "Sin actividad",
-    "empty-hint": "La actividad de tus credenciales aparecerá aquí",
+    "empty": "Aún no hay actividad",
+    "empty-hint": "Tus acciones recientes en la wallet aparecerán aquí.",
+    "empty-cta": "Añadir credencial",
     "empty-issued": "Sin credenciales recibidas",
     "empty-presented": "Sin credenciales presentadas",
     "empty-deleted": "Sin credenciales eliminadas",
-    "clear": "Borrar",
+    "clear": "Borrar historial",
     "clear-confirm": "¿Borrar toda la actividad?",
     "clear-title": "¿Borrar tu historial de actividad?",
     "clear-description": "Esto eliminará permanentemente todos los registros de actividad de tu wallet. Esta acción no se puede deshacer.",
     "clear-cancel": "Cancelar",
-    "clear-action": "Sí, borrar",
-    "export": "Exportar historial",
+    "clear-action": "Borrar historial",
+    "export": "Exportar historial de actividad",
     "csv-header-type": "Tipo",
     "csv-header-credential": "Credencial",
     "csv-header-counterparty": "Contraparte",
@@ -411,7 +496,9 @@
     "type-unknown": "Actividad",
     "subtitle-issued": "Recibido de {{counterparty}}",
     "subtitle-presented": "Presentado a {{counterparty}}",
+    "subtitle-deleted": "Emitida por {{counterparty}}",
     "time-now": "Ahora",
+    "date-today": "Hoy",
     "time-minutes": "Hace {{count}}min",
     "time-hours": "Hace {{count}}h",
     "time-days": "Hace {{count}}d",
@@ -427,9 +514,20 @@
     "detail-shared-attributes-empty": "No se registraron atributos compartidos para esta presentación."
   },
   "devices": {
+    "back-to-wallet": "Volver a la wallet",
+    "section-current": "Dispositivo actual",
+    "section-others": "Otros dispositivos conectados",
+    "last-active": "Última actividad",
+    "added-on": "Añadido el",
+    "remove-device": "Eliminar dispositivo",
+    "close-sessions": "Cerrar sesiones",
+    "no-other-devices-title": "No hay otros dispositivos conectados",
+    "no-other-devices-hint": "Tu wallet solo está disponible en este dispositivo.",
+    "no-current-device-title": "Este dispositivo no está registrado",
+    "no-current-device-hint": "No hemos podido asociar este navegador con ningún dispositivo registrado. Inicia sesión de nuevo desde aquí para registrarlo.",
     "settings-link": "Mis Dispositivos",
-    "title": "Mis Dispositivos",
-    "subtitle": "Gestiona las passkeys registradas en tu cuenta",
+    "title": "Dispositivos conectados",
+    "subtitle": "Gestiona los dispositivos vinculados a tu wallet y revoca el acceso cuando lo necesites.",
     "rename-header": "Renombrar Passkey",
     "rename-placeholder": "Introduce un nuevo nombre",
     "rename-confirm": "Renombrar",
@@ -451,7 +549,7 @@
     "this-device": "Este dispositivo"
   },
   "verification": {
-    "button": "Verificar Credencial",
+    "button": "Comprobar estado de la credencial",
     "modal-title": "Verificación de Credencial",
     "verifying": "Verificando credencial...",
     "result-valid": "La credencial es válida",
@@ -466,14 +564,22 @@
     "detail-revoked": "Revocada",
     "detail-no-status-list": "Sin lista de estado",
     "detail-no-expiry": "Sin fecha de caducidad",
-    "detail-check-error": "No se ha podido verificar"
+    "detail-check-error": "No se ha podido verificar",
+    "card-title": "Verificación de la credencial",
+    "row-issuance": "Fecha de emisión",
+    "row-expiration": "Fecha de caducidad",
+    "row-issuer": "Emisor",
+    "row-revocation": "Estado de revocación"
   },
   "confirmation": {
+    "decline": "Rechazar",
+    "accept-credential": "Aceptar credencial",
+    "review-within": "Revisa y confirma antes de {{time}}",
     "header": "¿Enviar Credencial?",
     "ok": "Ok",
     "cancel": "Cancelar",
     "new-credential": "¿Deseas aceptar esta credencial?",
-    "new-credential-title": "Nueva credencial",
+    "new-credential-title": "Verifica los datos de tu nueva credencial",
     "accept": "Aceptar",
     "pin": "Introduce el PIN",
     "description": "Se ha enviado un código PIN a tu email. Revísalo e introduce el PIN.",
@@ -488,15 +594,15 @@
   },
   "single-instance": {
     "type-window": "ventana",
-    "type-tab": "pesta\u00f1a",
+    "type-tab": "pestaña",
     "title-deep-link": "Credencial enviada a EUDI Wallet",
-    "title-already-open": "EUDI Wallet ya est\u00e1 abierto",
+    "title-already-open": "EUDI Wallet ya está abierto",
     "subtitle-deep-link": "La credencial se ha enviado a la {{type}} activa de EUDI Wallet. Puedes cerrar esta {{type}}.",
     "subtitle-already-open": "Ya tienes EUDI Wallet abierto en otra {{type}}. Puedes cerrar esta.",
     "hint-standalone": "Vuelve a la otra ventana de EUDI Wallet.",
-    "hint-tab": "Usa Ctrl+Tab para volver a la pesta\u00f1a activa.",
+    "hint-tab": "Usa Ctrl+Tab para volver a la pestaña activa.",
     "close-fallback-standalone": "Cierra esta ventana manualmente",
-    "close-fallback-tab": "Cierra esta pesta\u00f1a con Ctrl+W (\u2318+W en Mac)",
+    "close-fallback-tab": "Cierra esta pestaña con Ctrl+W (⌘+W en Mac)",
     "close-button": "Cerrar esta {{type}}"
   },
   "tenantNotFound": {

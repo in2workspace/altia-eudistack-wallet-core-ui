@@ -1,12 +1,11 @@
-import { Component, DestroyRef, inject, ViewChild } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Component, DestroyRef, OnDestroy, computed, inject, signal, ViewChild } from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { AsyncPipe } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
 import { Router } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, take } from 'rxjs';
 import { AuthService, RemoteAuthService } from 'src/app/core/services/auth.service';
 import { PasskeyPrfService } from 'src/app/core/services/passkey-prf.service';
 import { PasskeyStoreService } from 'src/app/core/services/passkey-store.service';
@@ -21,225 +20,70 @@ import { WalletService } from 'src/app/core/services/wallet.service';
 import { ActivityService } from 'src/app/core/services/activity.service';
 import { CredentialCacheService } from 'src/app/shared/services/credential-cache.service';
 
+const RESEND_COOLDOWN_SECONDS = 180;
+
+// Reassures the user that initialization is still progressing.
+const INIT_SLOW_THRESHOLD_MS = 3000;
+// Above PwaInstallService's own hard ceiling (INSTALL_DECISION_HARD_TIMEOUT_MS):
+// a safety net in case something other than installDecision$ hangs.
+const INIT_FAIL_THRESHOLD_MS = 8000;
+
+type WatermarkShape = 'access' | 'email' | 'verify' | 'passkey';
+
+const WATERMARK_ASSETS: Record<WatermarkShape, string> = {
+  access: 'assets/svg/download-solid.svg',
+  email: 'assets/svg/user-solid.svg',
+  verify: 'assets/svg/envelope-circle-check-solid.svg',
+  passkey: 'assets/svg/door-open-solid.svg',
+};
+
+const WATERMARK_VIEWBOX_WIDTH = 672;
+
+const WATERMARK_CROP_TOP = 200;
+
 @Component({
     selector: 'app-login',
-    template: `
-    <ion-content [fullscreen]="true" class="auth-bg">
-      <div class="auth-wrapper">
-        <div class="auth-card" [class.card-enter]="true">
-          <div class="auth-logo">
-            <img [src]="logoSrc" alt="Logo" class="logo-img" />
-          </div>
-
-          <!-- Pending install decision -->
-          @if ((pwaInstall.installDecision$ | async) === null) {
-            <div class="auth-checking">
-              <ion-spinner name="crescent"></ion-spinner>
-            </div>
-          }
-
-          <!-- Install screen -->
-          @if ((pwaInstall.installDecision$ | async) === true && showInstallScreen) {
-            <div class="fingerprint-hero">
-              <div class="fp-circle install-circle">
-                <ion-icon name="download-outline"></ion-icon>
-              </div>
-            </div>
-
-            <h2 class="auth-title">{{ 'auth.register.install-title' | translate }}</h2>
-            <p class="auth-subtitle">{{ 'auth.register.install-subtitle' | translate }}</p>
-
-            <ion-button
-              expand="block"
-              (click)="installApp()"
-              class="auth-button"
-            >
-              <ion-icon name="download-outline" slot="start"></ion-icon>
-              {{ 'auth.register.install-button' | translate }}
-            </ion-button>
-
-            <ion-button
-              expand="block"
-              fill="clear"
-              (click)="skipInstall()"
-              class="secondary-button"
-            >
-              {{ 'auth.register.continue-browser' | translate }}
-            </ion-button>
-          }
-
-          <!-- Login form -->
-          @if (isBrowserMode && ((pwaInstall.installDecision$ | async) === false || !showInstallScreen)) {
-            <div class="fingerprint-hero">
-              <div class="fp-circle" [class.fp-authenticating]="loading">
-                <ion-icon name="finger-print-outline"></ion-icon>
-              </div>
-            </div>
-
-            <h2 class="auth-title">{{ (hasExistingPasskey ? 'auth.login.title-welcome' : 'auth.login.title') | translate }}</h2>
-            <p class="auth-subtitle">{{ (hasExistingPasskey ? 'auth.login.subtitle' : 'auth.login.create-passkey-subtitle') | translate }}</p>
-
-            @if (hasExistingPasskey) {
-              <ion-button
-                expand="block"
-                (click)="loginBrowserMode()"
-                [disabled]="loading"
-                class="auth-button"
-              >
-                <ion-icon name="finger-print-outline" slot="start"></ion-icon>
-                {{ 'auth.login.passkey-button' | translate }}
-              </ion-button>
-            } @else {
-              <ion-button
-                expand="block"
-                (click)="createWalletBrowserMode()"
-                [disabled]="loading"
-                class="auth-button"
-              >
-                <ion-icon name="key-outline" slot="start"></ion-icon>
-                {{ 'auth.passkey.register-button' | translate }}
-              </ion-button>
-            }
-
-            @if (loading) {
-              <div class="auth-status">
-                <span class="status-dot"></span>
-                <span class="status-dot"></span>
-                <span class="status-dot"></span>
-              </div>
-            }
-            }
-
-            <!-- Server mode: email + OTP + passkey flow -->
-            <ng-container *ngIf="!isBrowserMode && ((pwaInstall.installDecision$ | async) === false || !showInstallScreen)">
-              <h2 class="auth-title">{{ (step === 'passkey' && !needsPasskeySetup ? 'auth.login.title-welcome' : 'auth.login.title') | translate }}</h2>
-              <p class="auth-subtitle">
-                <span *ngIf="step === 'email'">{{ 'auth.login.enter-email' | translate }}</span>
-                <span *ngIf="step === 'code'">{{ 'auth.register.code-sent' | translate }}</span>
-                <span *ngIf="step === 'passkey' && !needsPasskeySetup">{{ 'auth.login.verify-passkey' | translate }}</span>
-                <span *ngIf="step === 'passkey' && needsPasskeySetup">{{ 'auth.passkey.description' | translate }}</span>
-              </p>
-
-              <!-- Step 1: Email -->
-              <div *ngIf="step === 'email'" class="auth-form">
-                <div class="input-group">
-                  <ion-icon name="mail-outline" class="input-icon"></ion-icon>
-                  <ion-input
-                    [(ngModel)]="email"
-                    type="email"
-                    [placeholder]="'auth.register.email-placeholder' | translate"
-                    class="modern-input"
-                    (keyup.enter)="email && !loading && sendCode()"
-                  ></ion-input>
-                </div>
-
-                <ion-button expand="block" (click)="email && !loading && sendCode()" [disabled]="loading" [class.inactive-email]="!email && !loading" class="auth-button">
-                  <ion-spinner *ngIf="loading" name="crescent" class="btn-spinner"></ion-spinner>
-                  <ion-icon *ngIf="!loading" name="paper-plane-outline" slot="start"></ion-icon>
-                  <span *ngIf="!loading">{{ 'auth.register.send-code' | translate }}</span>
-                </ion-button>
-              </div>
-
-              <!-- Step 2: OTP code -->
-              <div *ngIf="step === 'code'" class="auth-form">
-                <div class="email-badge">
-                  <span>{{ email }}</span>
-                </div>
-
-                <app-otp-input
-                  #otpRef
-                  [length]="6"
-                  [autofocus]="true"
-                  [error]="!!errorMessage"
-                  [errorMessage]="errorMessage"
-                  (changed)="otpValue = $event; errorMessage = ''"
-                ></app-otp-input>
-
-                <ion-button expand="block" (click)="otpValue.length >= 6 && !loading && verifyCode()" [disabled]="loading" [class.inactive-email]="otpValue.length < 6 && !loading" class="auth-button">
-                  <ion-spinner *ngIf="loading" name="crescent" class="btn-spinner"></ion-spinner>
-                  <ion-icon *ngIf="!loading" name="shield-checkmark-outline" slot="start"></ion-icon>
-                  <span *ngIf="!loading">{{ 'auth.register.verify' | translate }}</span>
-                </ion-button>
-
-                <ion-button expand="block" fill="clear" (click)="goBackToEmail()" class="secondary-button">
-                  {{ 'auth.register.change-email' | translate }}
-                </ion-button>
-              </div>
-
-              <!-- Step 3a: Verify existing passkey -->
-              <div *ngIf="step === 'passkey' && !needsPasskeySetup" class="auth-form">
-                <div class="fingerprint-hero">
-                  <div class="fp-circle" [class.fp-authenticating]="loading">
-                    <ion-icon name="finger-print-outline"></ion-icon>
-                  </div>
-                </div>
-
-                <ion-button expand="block" (click)="verifyPasskey()" [disabled]="loading" class="auth-button">
-                  <ion-spinner *ngIf="loading" name="crescent" class="btn-spinner"></ion-spinner>
-                  <ion-icon *ngIf="!loading" name="finger-print-outline" slot="start"></ion-icon>
-                  <span *ngIf="!loading">{{ 'auth.login.passkey-button' | translate }}</span>
-                </ion-button>
-              </div>
-
-              <!-- Step 3b: Create passkey on this new device -->
-              <div *ngIf="step === 'passkey' && needsPasskeySetup" class="auth-form">
-                <div class="fingerprint-hero">
-                  <div class="fp-circle" [class.fp-authenticating]="loading">
-                    <ion-icon name="finger-print-outline"></ion-icon>
-                  </div>
-                </div>
-
-                <div class="input-group">
-                  <ion-icon name="phone-portrait-outline" class="input-icon"></ion-icon>
-                  <ion-input
-                    [(ngModel)]="deviceName"
-                    type="text"
-                    maxlength="100"
-                    [attr.aria-label]="'auth.passkey.device-name-label' | translate"
-                    [placeholder]="'auth.passkey.device-name-placeholder' | translate"
-                    class="modern-input"
-                    (keyup.enter)="deviceName.trim() && !loading && createPasskeyForDevice()"
-                  ></ion-input>
-                </div>
-
-                <ion-button expand="block" (click)="createPasskeyForDevice()" [disabled]="loading || !deviceName.trim()" class="auth-button">
-                  <ion-spinner *ngIf="loading" name="crescent" class="btn-spinner"></ion-spinner>
-                  <ion-icon *ngIf="!loading" name="finger-print-outline" slot="start"></ion-icon>
-                  <span *ngIf="!loading">{{ 'auth.passkey.register-button' | translate }}</span>
-                </ion-button>
-              </div>
-            </ng-container>
-
-            @if (errorMessage) {
-              <div class="error-box">
-                <ion-icon name="alert-circle-outline"></ion-icon>
-                <span>{{ errorMessage }}</span>
-              </div>
-            }
-        </div>
-      </div>
-    </ion-content>
-  `,
+    templateUrl: './login.page.html',
     styleUrl: './login.page.scss',
-  imports: [AsyncPipe, CommonModule, FormsModule, IonicModule, OtpInputComponent, TranslateModule]
+  imports: [CommonModule, FormsModule, IonicModule, OtpInputComponent, TranslateModule]
 })
 // eslint-disable-next-line @angular-eslint/component-class-suffix
-export class LoginPage {
+export class LoginPage implements OnDestroy {
   @ViewChild('otpRef') otpInput!: OtpInputComponent;
 
   private readonly themeService = inject(ThemeService);
-  readonly pwaInstall = inject(PwaInstallService);
-  readonly logoSrc = this.themeService.getLogoUrl('dark');
+  private readonly pwaInstall = inject(PwaInstallService);
+  private readonly installDecision = toSignal(this.pwaInstall.installDecision$);
+  private readonly theme = toSignal(this.themeService.getTheme());
   loading = false;
   errorMessage = '';
-  showInstallScreen = !this.pwaInstall.isStandalone;
+  readonly showInstallScreen = signal(!this.pwaInstall.isStandalone);
+  showHelpModal = false;
+
+  readonly helpFaqs = [
+    { question: 'auth.access.help.q1', answer: 'auth.access.help.a1' },
+    { question: 'auth.access.help.q2', answer: 'auth.access.help.a2' },
+    { question: 'auth.access.help.q3', answer: 'auth.access.help.a3' },
+  ];
+
+  readonly initTakingLong = signal(false);
+  readonly initFailed = signal(false);
+  // Set by retryInit() when installDecision$ never settled even past the fail
+  // threshold: installDecision$ is a shareReplay({ refCount: false }), so a
+  // fresh subscription cannot "restart" it — the only way out without a full
+  // reload is to stop waiting on it and treat the decision as resolved (false).
+  private readonly forceReady = signal(false);
+  private slowInitTimer: ReturnType<typeof setTimeout> | null = null;
+  private failInitTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Server mode: multi-step flow
   email = '';
   otpValue = '';
-  step: 'email' | 'code' | 'passkey' = 'email';
+  readonly step = signal<'email' | 'code' | 'passkey'>('email');
   needsPasskeySetup = false;
   deviceName = '';
+  readonly resendSecondsLeft = signal(0);
+  private resendTimer: ReturnType<typeof setInterval> | null = null;
   private passkeyFromRefreshToken = false;
   private matchedPasskeyId: string | null = null;
 
@@ -257,31 +101,148 @@ export class LoginPage {
   readonly isBrowserMode = this.authService instanceof LocalAuthService;
   readonly hasExistingPasskey = this.prfService.hasPasskey();
 
+  readonly brandName = computed(() => {
+    const name = this.theme()?.branding?.name?.trim();
+    return name ? name.split(' ')[0] : 'Wallet';
+  });
+
+  readonly screen = computed<'checking' | 'access' | 'browser' | 'email' | 'code' | 'passkey'>(() => {
+    const decision = this.forceReady() ? false : this.installDecision();
+    if (decision === undefined) return 'checking';
+    if (decision && this.showInstallScreen()) return 'access';
+    if (this.isBrowserMode) return 'browser';
+    return this.step();
+  });
+
+  readonly canGoBack = computed(() => {
+    const screen = this.screen();
+    return screen === 'code' || screen === 'passkey';
+  });
+
+  readonly watermark = computed<WatermarkShape | null>(() => {
+    switch (this.screen()) {
+      case 'checking': return null;
+      case 'access': return 'access';
+      case 'code': return 'verify';
+      case 'browser':
+      case 'passkey': return 'passkey';
+      default: return 'email';
+    }
+  });
+
+
+  readonly watermarkStyle = computed((): Record<string, string> => {
+    const shape = this.watermark();
+    if (!shape) return { display: 'none' };
+
+    const image = `url('${new URL(WATERMARK_ASSETS[shape], document.baseURI).href}')`;
+    const position = `left calc(var(--wm-width) * ${WATERMARK_CROP_TOP} / -${WATERMARK_VIEWBOX_WIDTH})`;
+
+    return {
+      'mask-image': image,
+      'mask-repeat': 'no-repeat',
+      'mask-size': 'contain',
+      'mask-position': position,
+    };
+  });
+
+  readonly resendCountdown = computed(() => {
+    const total = this.resendSecondsLeft();
+    const minutes = Math.floor(total / 60);
+    const seconds = total % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  });
+
   ionViewWillEnter(): void {
     this.loading = false;
     this.errorMessage = '';
+    this.forceReady.set(false);
+    this.startInitWatchdog();
 
     if (!this.isBrowserMode && localStorage.getItem('wallet_refresh_token')) {
-      this.step = 'passkey';
+      this.step.set('passkey');
       this.passkeyFromRefreshToken = true;
       this.needsPasskeySetup = !this.prfService.hasPasskey();
       if (this.needsPasskeySetup) {
         this.deviceName = this.getDeviceName();
       }
     } else {
-      this.step = 'email';
+      this.step.set('email');
       this.passkeyFromRefreshToken = false;
       this.needsPasskeySetup = false;
     }
   }
 
+  ionViewWillLeave(): void {
+    this.stopResendCountdown();
+    this.clearInitWatchdog();
+  }
+
+  ngOnDestroy(): void {
+    this.stopResendCountdown();
+    this.clearInitWatchdog();
+  }
+
   async installApp(): Promise<void> {
     await this.pwaInstall.promptInstall();
-    this.showInstallScreen = false;
+    this.showInstallScreen.set(false);
   }
 
   skipInstall(): void {
-    this.showInstallScreen = false;
+    this.showInstallScreen.set(false);
+  }
+
+  openHelp(): void {
+    this.showHelpModal = true;
+  }
+
+  closeHelp(): void {
+    this.showHelpModal = false;
+  }
+
+  // --- Initialization watchdog ---
+
+  /**
+   * Guards against installDecision$ (or any future init dependency) never
+   * settling: escalates the spinner to a "taking longer" message and, past
+   * INIT_FAIL_THRESHOLD_MS, to a friendly error screen. retryInit() from that
+   * screen forces past the stuck probe (see forceReady) rather than merely
+   * re-arming these timers, so it recovers without a manual browser refresh.
+   */
+  private startInitWatchdog(): void {
+    this.clearInitWatchdog();
+    this.initTakingLong.set(false);
+    this.initFailed.set(false);
+
+    this.slowInitTimer = setTimeout(() => this.initTakingLong.set(true), INIT_SLOW_THRESHOLD_MS);
+    this.failInitTimer = setTimeout(() => this.initFailed.set(true), INIT_FAIL_THRESHOLD_MS);
+
+    this.pwaInstall.installDecision$.pipe(
+      take(1),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(() => this.clearInitWatchdog());
+  }
+
+  private clearInitWatchdog(): void {
+    if (this.slowInitTimer) clearTimeout(this.slowInitTimer);
+    if (this.failInitTimer) clearTimeout(this.failInitTimer);
+    this.slowInitTimer = null;
+    this.failInitTimer = null;
+  }
+
+  retryInit(): void {
+    // installDecision$ is shareReplay({ refCount: false }): resubscribing does not
+    // restart its race, so simply re-arming the watchdog can't recover a stuck probe.
+    // Once we've actually shown the failure screen, stop waiting on it and proceed
+    // as if it had resolved to false (no install screen, straight to login).
+    if (this.initFailed()) {
+      this.forceReady.set(true);
+    }
+    this.startInitWatchdog();
+  }
+
+  reloadApp(): void {
+    window.location.reload();
   }
 
   // --- Browser mode: single-step passkey login ---
@@ -326,12 +287,15 @@ export class LoginPage {
   }
 
   goBackToEmail(): void {
-    this.step = 'email';
+    this.step.set('email');
     this.errorMessage = '';
     this.otpValue = '';
+    this.stopResendCountdown();
   }
 
   sendCode(): void {
+    if (!this.email || this.loading) return;
+
     this.loading = true;
     this.errorMessage = '';
 
@@ -339,9 +303,33 @@ export class LoginPage {
       takeUntilDestroyed(this.destroyRef)
     ).subscribe({
       next: () => {
-        this.step = 'code';
+        this.step.set('code');
         this.otpValue = '';
         this.loading = false;
+        this.startResendCountdown();
+      },
+      error: (err) => {
+        this.errorMessage = err?.status === 429
+          ? this.translate.instant('auth.errors.too-many-attempts')
+          : (err?.error?.message || err?.error?.detail || 'Failed to send verification code');
+        this.loading = false;
+      }
+    });
+  }
+
+  resendCode(): void {
+    if (this.loading || this.resendSecondsLeft() > 0) return;
+
+    this.loading = true;
+    this.errorMessage = '';
+
+    (this.authService as RemoteAuthService).register(this.email, 'login').pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: () => {
+        this.otpValue = '';
+        this.loading = false;
+        this.startResendCountdown();
       },
       error: (err) => {
         this.errorMessage = err?.status === 429
@@ -353,6 +341,8 @@ export class LoginPage {
   }
 
   verifyCode(): void {
+    if (this.otpValue.length < 6 || this.loading) return;
+
     this.loading = true;
     this.errorMessage = '';
 
@@ -360,6 +350,7 @@ export class LoginPage {
       takeUntilDestroyed(this.destroyRef)
     ).subscribe({
       next: () => {
+        this.stopResendCountdown();
         this.passkeyFromRefreshToken = false;
         this.resolvePasskeySetupStep();
       },
@@ -415,7 +406,7 @@ export class LoginPage {
     if (this.needsPasskeySetup) {
       this.deviceName = this.getDeviceName();
     }
-    this.step = 'passkey';
+    this.step.set('passkey');
     this.loading = false;
   }
 
@@ -423,11 +414,24 @@ export class LoginPage {
     this.loading = true;
     this.errorMessage = '';
 
+    // 1. Local authentication (Biometrics / WebAuthn)
     try {
       await this.authenticateLocally();
+    } catch (err: any) {
+      // WebAuthn error or cancellation: stay on 'passkey' step
+      // with the original browser/system error message.
+      this.errorMessage = err?.message || 'Passkey verification failed';
+      this.loading = false;
+      return;
+    }
 
+    // 2. Network operations (Refresh and Sync)
+    try {
       if (this.passkeyFromRefreshToken) {
-        await firstValueFrom((this.authService as RemoteAuthService).refreshAccessToken());
+        // If it fails with 'clear-only', RemoteAuthService clears localStorage automatically
+        await firstValueFrom(
+          (this.authService as RemoteAuthService).refreshAccessToken({ onAuthFailure: 'clear-only' })
+        );
       } else if (this.matchedPasskeyId) {
         // Full re-auth (email+OTP) on a device that already had a passkey: the session
         // issued by verify-email isn't attributed to any passkey yet (EUD-104 devices list).
@@ -437,13 +441,15 @@ export class LoginPage {
       await this.syncCredentialsThenNavigate();
     } catch (err: any) {
       if (this.passkeyFromRefreshToken) {
-        localStorage.removeItem('wallet_refresh_token');
+        // Token has expired: return to the start of the flow with recovery message
         this.passkeyFromRefreshToken = false;
-        this.step = 'email';
-        this.errorMessage = 'Your session has expired. Please sign in again.';
+        this.step.set('email');
+        this.errorMessage = this.translate.instant('auth.errors.session-expired-request-code');
+        // PENDING_DEEP_LINK_KEY stays intact to allow resumption after OTP
       } else {
         this.errorMessage = err?.message || 'Passkey verification failed';
       }
+    } finally {
       this.loading = false;
     }
   }
@@ -501,6 +507,25 @@ export class LoginPage {
     }
   }
 
+  private startResendCountdown(): void {
+    this.stopResendCountdown();
+    this.resendSecondsLeft.set(RESEND_COOLDOWN_SECONDS);
+    this.resendTimer = setInterval(() => {
+      this.resendSecondsLeft.update(seconds => seconds - 1);
+      if (this.resendSecondsLeft() <= 0) {
+        this.stopResendCountdown();
+      }
+    }, 1000);
+  }
+
+  private stopResendCountdown(): void {
+    if (this.resendTimer !== null) {
+      clearInterval(this.resendTimer);
+      this.resendTimer = null;
+    }
+    this.resendSecondsLeft.set(0);
+  }
+
   private async authenticateLocally(): Promise<void> {
     const credentialId = this.prfService.getCredentialId();
     if (!credentialId) {
@@ -529,7 +554,7 @@ export class LoginPage {
   private navigateHome(): void {
     const pendingLink = sessionStorage.getItem(PENDING_DEEP_LINK_KEY);
     sessionStorage.removeItem(PENDING_DEEP_LINK_KEY);
-    this.router.navigateByUrl(pendingLink || '/tabs/home');
+    this.router.navigateByUrl(pendingLink || '/tabs/credentials');
   }
 
   private getDeviceName(): string {

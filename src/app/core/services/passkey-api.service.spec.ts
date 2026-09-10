@@ -1,125 +1,141 @@
 import { TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { PasskeyApiService, PasskeyInfo } from './passkey-api.service';
+import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { PasskeyApiService, PasskeyInfo, RegisterPasskeyRequest } from './passkey-api.service';
 import { UrlResolverService } from './url-resolver.service';
 
-const SERVER_BASE = 'https://tenant.example.com';
-const PASSKEYS_URL = `${SERVER_BASE}/api/v1/auth/passkeys`;
-
-function setup(): { service: PasskeyApiService; httpMock: HttpTestingController } {
-  TestBed.configureTestingModule({
-    providers: [
-      provideHttpClient(),
-      provideHttpClientTesting(),
-      PasskeyApiService,
-      { provide: UrlResolverService, useValue: { serverUrl: () => SERVER_BASE } },
-    ],
-  });
-  return {
-    service: TestBed.inject(PasskeyApiService),
-    httpMock: TestBed.inject(HttpTestingController),
-  };
-}
-
-const samplePasskey: PasskeyInfo = {
-  id: 'p1',
-  credentialId: 'cred-1',
-  displayName: 'My Laptop',
-  createdAt: '2026-01-01T00:00:00.000Z',
-  lastUsedAt: null,
-  activeSessions: 1,
-};
-
 describe('PasskeyApiService', () => {
-  afterEach(() => TestBed.inject(HttpTestingController).verify());
+  let service: PasskeyApiService;
+  let httpMock: HttpTestingController;
+  let urlResolverSpy: jest.Mocked<UrlResolverService>;
 
-  describe('registerPasskey', () => {
-    it('POSTs to /passkeys with the given payload, including an optional refreshToken', (done) => {
-      const { service, httpMock } = setup();
+  const mockServerUrl = 'https://backend.example.com';
+  const mockAuthBase = `${mockServerUrl}/api/v1/auth`;
 
-      service.registerPasskey({
-        credentialId: 'cred-1',
-        displayName: 'My Laptop',
-        userAgent: 'test-agent',
-        refreshToken: 'refresh-abc',
-      }).subscribe((res) => {
-        expect(res).toEqual(samplePasskey);
-        done();
-      });
+  const mockPasskey: PasskeyInfo = {
+    id: '1',
+    credentialId: 'cred-123',
+    displayName: 'My Device',
+    createdAt: '2023-01-01T00:00:00Z',
+    lastUsedAt: null,
+    activeSessions: 1
+  };
 
-      const req = httpMock.expectOne(PASSKEYS_URL);
-      expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual({
-        credentialId: 'cred-1',
-        displayName: 'My Laptop',
-        userAgent: 'test-agent',
-        refreshToken: 'refresh-abc',
-      });
-      req.flush(samplePasskey);
+  beforeEach(() => {
+    urlResolverSpy = {
+      serverUrl: jest.fn().mockReturnValue(mockServerUrl)
+    } as any;
+
+    TestBed.configureTestingModule({
+      imports: [HttpClientTestingModule],
+      providers: [
+        PasskeyApiService,
+        { provide: UrlResolverService, useValue: urlResolverSpy }
+      ]
     });
 
-    it('works without a refreshToken (optional field)', (done) => {
-      const { service, httpMock } = setup();
+    service = TestBed.inject(PasskeyApiService);
+    httpMock = TestBed.inject(HttpTestingController);
+  });
 
-      service.registerPasskey({ credentialId: 'cred-1', displayName: 'My Laptop' }).subscribe(() => done());
+  afterEach(() => {
+    httpMock.verify();
+  });
 
-      const req = httpMock.expectOne(PASSKEYS_URL);
+  it('should be created', () => {
+    expect(service).toBeTruthy();
+  });
+
+  describe('registerPasskey', () => {
+    it('should POST to /passkeys', () => {
+      const request: RegisterPasskeyRequest = {
+        credentialId: 'cred-123',
+        displayName: 'My Device',
+        userAgent: 'Mozilla/5.0'
+      };
+
+      service.registerPasskey(request).subscribe(response => {
+        expect(response).toEqual(mockPasskey);
+      });
+
+      const req = httpMock.expectOne(`${mockAuthBase}/passkeys`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual(request);
+      req.flush(mockPasskey);
+    });
+
+    it('includes the refreshToken in the body when provided', () => {
+      const request: RegisterPasskeyRequest = {
+        credentialId: 'cred-123',
+        displayName: 'My Device',
+        userAgent: 'Mozilla/5.0',
+        refreshToken: 'refresh-abc'
+      };
+
+      service.registerPasskey(request).subscribe();
+
+      const req = httpMock.expectOne(`${mockAuthBase}/passkeys`);
+      expect(req.request.body.refreshToken).toBe('refresh-abc');
+      req.flush(mockPasskey);
+    });
+
+    it('works without a refreshToken (optional field)', () => {
+      service.registerPasskey({ credentialId: 'cred-123', displayName: 'My Device' }).subscribe();
+
+      const req = httpMock.expectOne(`${mockAuthBase}/passkeys`);
       expect(req.request.body.refreshToken).toBeUndefined();
-      req.flush(samplePasskey);
+      req.flush(mockPasskey);
     });
   });
 
   describe('listPasskeys', () => {
-    it('GETs /passkeys and returns the list', (done) => {
-      const { service, httpMock } = setup();
+    it('should GET from /passkeys', () => {
+      const mockPasskeys: PasskeyInfo[] = [mockPasskey];
 
-      service.listPasskeys().subscribe((res) => {
-        expect(res).toEqual([samplePasskey]);
-        done();
+      service.listPasskeys().subscribe(response => {
+        expect(response).toEqual(mockPasskeys);
       });
 
-      const req = httpMock.expectOne(PASSKEYS_URL);
+      const req = httpMock.expectOne(`${mockAuthBase}/passkeys`);
       expect(req.request.method).toBe('GET');
-      req.flush([samplePasskey]);
+      req.flush(mockPasskeys);
     });
   });
 
   describe('renamePasskey', () => {
-    it('PATCHes /passkeys/{id} with the new displayName', (done) => {
-      const { service, httpMock } = setup();
+    it('should PATCH /passkeys/{id}', () => {
+      const newName = 'Updated Device Name';
+      const updatedPasskey = { ...mockPasskey, displayName: newName };
 
-      service.renamePasskey('p1', 'New Name').subscribe((res) => {
-        expect(res.displayName).toBe('New Name');
-        done();
+      service.renamePasskey('1', newName).subscribe(response => {
+        expect(response).toEqual(updatedPasskey);
       });
 
-      const req = httpMock.expectOne(`${PASSKEYS_URL}/p1`);
+      const req = httpMock.expectOne(`${mockAuthBase}/passkeys/1`);
       expect(req.request.method).toBe('PATCH');
-      expect(req.request.body).toEqual({ displayName: 'New Name' });
-      req.flush({ ...samplePasskey, displayName: 'New Name' });
+      expect(req.request.body).toEqual({ displayName: newName });
+      req.flush(updatedPasskey);
     });
   });
 
   describe('deletePasskey', () => {
-    it('DELETEs /passkeys/{id}', (done) => {
-      const { service, httpMock } = setup();
+    it('should DELETE /passkeys/{id}', () => {
+      service.deletePasskey('1').subscribe(response => {
+        expect(response).toBeNull();
+      });
 
-      service.deletePasskey('p1').subscribe(() => done());
-
-      const req = httpMock.expectOne(`${PASSKEYS_URL}/p1`);
+      const req = httpMock.expectOne(`${mockAuthBase}/passkeys/1`);
       expect(req.request.method).toBe('DELETE');
       req.flush(null);
     });
   });
 
   describe('revokeSessions', () => {
-    it('POSTs to /passkeys/{id}/revoke-sessions with an empty body', (done) => {
-      const { service, httpMock } = setup();
+    it('should POST to /passkeys/{id}/revoke-sessions', () => {
+      service.revokeSessions('1').subscribe(response => {
+        expect(response).toBeNull();
+      });
 
-      service.revokeSessions('p1').subscribe(() => done());
-
-      const req = httpMock.expectOne(`${PASSKEYS_URL}/p1/revoke-sessions`);
+      const req = httpMock.expectOne(`${mockAuthBase}/passkeys/1/revoke-sessions`);
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual({});
       req.flush(null);
@@ -127,12 +143,12 @@ describe('PasskeyApiService', () => {
   });
 
   describe('confirmSession', () => {
-    it('POSTs to /passkeys/{id}/confirm-session with the refreshToken', (done) => {
-      const { service, httpMock } = setup();
+    it('should POST to /passkeys/{id}/confirm-session with the refreshToken', () => {
+      service.confirmSession('1', 'refresh-abc').subscribe(response => {
+        expect(response).toBeNull();
+      });
 
-      service.confirmSession('p1', 'refresh-abc').subscribe(() => done());
-
-      const req = httpMock.expectOne(`${PASSKEYS_URL}/p1/confirm-session`);
+      const req = httpMock.expectOne(`${mockAuthBase}/passkeys/1/confirm-session`);
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual({ refreshToken: 'refresh-abc' });
       req.flush(null);
