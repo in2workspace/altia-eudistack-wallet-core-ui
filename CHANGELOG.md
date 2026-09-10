@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Error pop-ups showed their own HTML markup as visible text**: several `errors.*` keys deliberately embed a support link, but `ToastServiceHandler` escaped the whole translated string before injecting it into the alert, so users saw `<a href='...'>` mid-sentence and the link was unusable. The escape came from the EUD-142 security review — runtime-translated text reaches an `innerHTML` sink — so it was replaced with real sanitization (`DomSanitizer`) rather than removed: authored markup renders, while `<script>`, event handlers and `javascript:` hrefs are stripped. Applies to the three alert/toast paths; the F2 regression tests were updated to assert removal instead of escaping.
+
+- **"Connected devices" never finished loading on browser-mode tenants**: where the wallet runs without a server account (KPMG), no passkey request is ever issued, so the page's initial `loading` state was never cleared. The mode check could not simply be dropped — that endpoint needs a token browser mode does not have, and the resulting 401 makes `authInterceptor` force a logout. The page now shows a dedicated "requires a server account" state instead of redirecting to settings, the menu entry is hidden only when discovery positively reports browser mode (so a failed probe never hides it from an EBW tenant like Dome), and the list request got a 10s timeout falling back to the existing retry state.
+
+### Fixed
+
 - **Surfaced session expiry during passkey verification**: when a passkey login fails due to an expired refresh token (e.g., resuming a deep-link flow after a long period), the wallet now distinguishes between a WebAuthn failure (staying on the passkey step with the original error) and a token failure. Token failures now trigger a controlled state clearance (`onAuthFailure: 'clear-only'`) and return the holder to the initial email step with a dedicated "session expired" message (`auth.errors.session-expired-request-code`), instead of potentially leaving the wallet in an inconsistent state or showing a generic WebAuthn error.
 
 ### Added
